@@ -40,3 +40,12 @@ To remove one: post `Closed $USDJPY`. A newer call on the same ticker replaces t
 2. Bot tab → Reset Token → copy it. On the same page, turn ON "Message Content Intent" → Save.
 3. OAuth2 → URL Generator → scope `bot` → permissions `View Channels` + `Read Message History` → open the URL → add to Holistic Traders.
 4. GitHub repo → Settings → Secrets and variables → Actions → New secret `DISCORD_BOT_TOKEN` = the token.
+
+## Holistic Trivia + Dojo belts (#off-topic)
+- A poll round every 2 hours, 8 AM to 8 PM CT, daily. Each poll is open 2 hours, and the answer and explanation drop with the next round.
+- Market-legend quotes at 10 AM, 2 PM and 6 PM. The leaderboard posts at 9:30 PM CT.
+- Points: correct answer 3, any vote 1, chat activity 1 per message (max 5/day), and +2/day once you're on a 3+ day streak.
+- Belts (all-time points) are given as colored Discord roles: ⚪ White, 🟡 Yellow 10, 🟠 Orange 25, 🟢 Green 50, 🔵 Blue 100, 🟣 Purple 175, 🟤 Brown 275, ⚫ Black 400.
+- Needs the secret `OFFTOPIC_WEBHOOK_URL`. Scoring and belt roles also need `DISCORD_BOT_TOKEN`, with the bot granted View Channels, Read Message History and **Manage Roles**.
+- Questions and quotes live in `trivia_bank.py`. Edit them anytime.
+- To relaunch the announcement, edit `launch.txt`.

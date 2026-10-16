@@ -1,0 +1,46 @@
+name: Holistic Trivia
+on:
+  schedule:
+    # UTC for Central Daylight Time (UTC-5): rounds 8a,10a,12p,2p,4p,6p,8p CT; leaderboard 9:30p CT
+    - cron: "0 13,15,17,19,21,23 * * *"
+    - cron: "0 1 * * *"
+    - cron: "30 2 * * *"
+  push:
+    paths: ["launch.txt"]      # editing launch.txt fires the launch announcement
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "round, leaderboard or announce"
+        default: "round"
+permissions:
+  contents: write
+concurrency: trivia
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Pick mode
+        id: m
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then echo "mode=${{ inputs.mode }}" >> $GITHUB_OUTPUT;
+          elif [ "${{ github.event_name }}" = "push" ]; then echo "mode=announce" >> $GITHUB_OUTPUT;
+          elif [ "${{ github.event.schedule }}" = "30 2 * * *" ]; then echo "mode=leaderboard" >> $GITHUB_OUTPUT;
+          else echo "mode=round" >> $GITHUB_OUTPUT; fi
+      - name: Run
+        env:
+          OFFTOPIC_WEBHOOK_URL: ${{ secrets.OFFTOPIC_WEBHOOK_URL }}
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
+        run: |
+          if [ -z "$OFFTOPIC_WEBHOOK_URL" ]; then echo "OFFTOPIC_WEBHOOK_URL not set yet, skipping"; exit 0; fi
+          python trivia.py ${{ steps.m.outputs.mode }}
+      - name: Save state
+        run: |
+          git config user.name "holistic-trivia-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add state/trivia.json
+          git diff --cached --quiet || (git commit -m "trivia state [skip ci]" && git pull --rebase && git push)
