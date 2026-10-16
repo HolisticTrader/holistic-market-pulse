@@ -84,6 +84,23 @@ def add(s, uid, name, pts):
     s["total"][uid] = s["total"].get(uid, 0) + pts
     if name: s["names"][uid] = name
 
+def tag(s, u):
+    return f"<@{u}>" if not str(u).startswith("u:") else f"**{s['names'].get(u, 'trader')}**"
+
+def pingable(ids):
+    return [u for u in ids if not str(u).startswith("u:")]
+
+def resolve_usernames(s, members):
+    """Merge points stored by username ("u:name") into real Discord IDs once the bot can see members."""
+    by_name = {m["user"]["username"].lower(): m["user"] for m in members if "user" in m}
+    for key in [k for k in list(s["total"]) if k.startswith("u:")]:
+        u = by_name.get(key[2:].lower())
+        if not u: continue
+        for bucket in ("total", "week_pts"):
+            if key in s[bucket]:
+                s[bucket][u["id"]] = s[bucket].get(u["id"], 0) + s[bucket].pop(key)
+        s["names"][u["id"]] = s["names"].pop(key, None) or uname(u)
+
 def uname(u): return u.get("global_name") or u.get("username") or "trader"
 
 def score_polls(s, tok):
@@ -164,6 +181,7 @@ def sync_belt_roles(s, tok):
     # every human member gets at least White Belt (new joiners included)
     try:
         members = req(f"https://discord.com/api/v10/guilds/{GUILD}/members?limit=1000", auth=auth)
+        resolve_usernames(s, members)
         for m in members:
             u = m.get("user", {})
             if u.get("bot") or set(m.get("roles", [])) & belt_ids: continue
@@ -172,6 +190,7 @@ def sync_belt_roles(s, tok):
     except Exception as e:
         print("member list failed", e)
     for uid, pts in s["total"].items():
+        if str(uid).startswith("u:"): continue
         want = ids[belt(pts)[2]]
         try:
             mem = req(f"https://discord.com/api/v10/guilds/{GUILD}/members/{uid}", auth=auth)
@@ -209,17 +228,17 @@ def leaderboard(hook, s):
     rows = []
     for k, (u, p) in enumerate(top):
         _, e, nm = belt(s["total"].get(u, 0)); st = s["streak"].get(u, 0)
-        rows.append(f"{med[k]} **{s['names'].get(u, 'trader')}** · {p} pts {e} {nm} Belt" + (f" · 🔥{st}-day streak" if st >= 2 else ""))
+        rows.append(f"{med[k]} {tag(s, u)} · {p} pts {e} {nm} Belt" + (f" · 🔥{st}-day streak" if st >= 2 else ""))
     txt = f"🥋 **Holistic Traders Dojo · Week {wk[-2:]} standings**\n" + "\n".join(rows)
     at = sorted(s["total"].items(), key=lambda x: -x[1])[:5]
     if at:
         txt += "\n\n🏛️ **All-time Hall of Fame**\n" + "\n".join(
-            f"{['👑','2.','3.','4.','5.'][k]} **{s['names'].get(u, 'trader')}** · {p} pts {belt(p)[1]} {belt(p)[2]} Belt" for k, (u, p) in enumerate(at))
+            f"{['👑','2.','3.','4.','5.'][k]} {tag(s, u)} · {p} pts {belt(p)[1]} {belt(p)[2]} Belt" for k, (u, p) in enumerate(at))
     if promos:
         txt += "\n\n🎖️ **Belt promotions:** " + ", ".join(f"<@{u}> → {belt(s['total'][u])[1]} {belt(s['total'][u])[2]}" for u in promos)
     txt += ("\n\n-# Points: correct answer 3 · any vote 1 · active in chat 1/msg (max 5/day) · 3+ day streak +2/day. "
             "Belts: ⚪→🟡10→🟠25→🟢50→🔵100→🟣175→🟤275→⚫400 (all-time). Weekly board resets Monday.")
-    say(hook, txt, users=promos)
+    say(hook, txt, users=pingable(set(promos) | {u for u, _ in top} | {u for u, _ in at}))
 
 def hall_of_fame(hook, s):
     """Friday-morning all-time leaderboard."""
@@ -232,19 +251,21 @@ def hall_of_fame(hook, s):
             + ("" if tok else "\n-# Scoring switches on once the server bot is connected."))
         return
     marks = ["👑", "🥈", "🥉"] + [f"{i}." for i in range(4, 11)]
-    rows = "\n".join(f"{marks[k]} **{s['names'].get(u, 'trader')}** · {p} pts · {belt(p)[1]} {belt(p)[2]} Belt"
+    rows = "\n".join(f"{marks[k]} {tag(s, u)} · {p} pts · {belt(p)[1]} {belt(p)[2]} Belt"
                      + (f" · 🔥{s['streak'].get(u)}-day streak" if s["streak"].get(u, 0) >= 2 else "")
                      for k, (u, p) in enumerate(top))
     counts = {}
     for p in s["total"].values():
         counts[belt(p)[2]] = counts.get(belt(p)[2], 0) + 1
-    dojo = " · ".join(f"{e} {counts[nm]}" for _, e, nm in BELTS if counts.get(nm))
+    dojo = " · ".join(f"{e} {counts[nm]}" for _, e, nm in BELTS if counts.get(nm) and nm != "White") + " · everyone else ⚪"
     leader = top[0]
-    nxt = next((need for need, _, _ in BELTS if need > leader[1]), None)
-    tail = (f"\n\n{s['names'].get(leader[0], 'Our leader')} is {nxt - leader[1]} pts from the next belt. Who's catching them? 👀"
-            if nxt else f"\n\n{s['names'].get(leader[0], 'Our leader')} is a ⚫ Black Belt. Respect. 🙏")
-    say(hook, f"🏛️ **Holistic Traders Hall of Fame · all-time**\n{rows}\n\n**The dojo right now:** {dojo}{tail}\n"
-              "-# Every Friday morning. Points never reset here. Belts: ⚪→🟡10→🟠25→🟢50→🔵100→🟣175→🟤275→⚫400")
+    nxt = next(((need, e, nm) for need, e, nm in BELTS if need > leader[1]), None)
+    tail = (f"\n\n{tag(s, leader[0])} is {nxt[0] - leader[1]} pts from {nxt[1]} {nxt[2]} Belt. Who's catching them? 👀"
+            if nxt else f"\n\n{tag(s, leader[0])} is a ⚫ Black Belt. Respect. 🙏")
+    intro = s.pop("hof_intro", "")
+    say(hook, f"{intro}🏛️ **Holistic Traders Hall of Fame · all-time**\n{rows}\n\n**The dojo right now:** {dojo}{tail}\n"
+              "-# Every Friday morning. Points never reset here. Belts: ⚪→🟡10→🟠25→🟢50→🔵100→🟣175→🟤275→⚫400",
+        users=pingable(u for u, _ in top))
 
 def announce(hook, s):
     general = os.environ.get("DISCORD_WEBHOOK_URL", "").rstrip("/")
