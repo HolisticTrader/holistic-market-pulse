@@ -1,1 +1,24 @@
-{"asked": [], "last": null, "polls": [], "week": "", "week_pts": {}, "total": {}, "names": {}, "streak": {}, "last_day": {}, "quote_i": 0, "last_scan": null}
+{
+ "asked": [
+  33
+ ],
+ "last": 33,
+ "polls": [
+  {
+   "id": "1560761092324458611",
+   "ch": "1342649158187749460",
+   "ans": 3,
+   "n": 4,
+   "scored": false,
+   "day": "2026-10-16"
+  }
+ ],
+ "week": "",
+ "week_pts": {},
+ "total": {},
+ "names": {},
+ "streak": {},
+ "last_day": {},
+ "quote_i": 0,
+ "last_scan": null
+}
