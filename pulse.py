@@ -127,6 +127,9 @@ def main():
     hook = os.environ["DISCORD_WEBHOOK_URL"].rstrip("/")
     payload = {"content": build(kind), "username": "Holistic Market Pulse", "allowed_mentions": {"parse": []}}
     mid = os.environ.get("BOARD_MESSAGE_ID", "").strip()
+    if kind == "board" and not mid and os.environ.get("GITHUB_EVENT_NAME") == "schedule":
+        print("No BOARD_MESSAGE_ID yet: skipping scheduled board run (run 'board' manually once to create it).")
+        return
     if kind == "board" and mid:
         send(f"{hook}/messages/{mid}", payload, method="PATCH")
         print("board updated", mid)
