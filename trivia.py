@@ -268,7 +268,7 @@ def hall_of_fame(hook, s):
         users=pingable(u for u, _ in top))
 
 def announce(hook, s):
-    general = os.environ.get("DISCORD_WEBHOOK_URL", "").rstrip("/")
+    general = clean_hook(os.environ["DISCORD_WEBHOOK_URL"]) if os.environ.get("DISCORD_WEBHOOK_URL") else ""
     try: ch = req(hook).get("channel_id")
     except Exception: ch = None
     where = f"<#{ch}>" if ch else "#off-topic"
@@ -284,9 +284,15 @@ def announce(hook, s):
     say(general or hook, txt, ping_everyone=True)
     round_(hook, s)
 
+import re as _re
+def clean_hook(v):
+    m = _re.search(r"https://(?:\w+\.)?discord(?:app)?\.com/api/webhooks/\d+/[\w-]+", v or "")
+    if not m: raise SystemExit("Webhook setting doesn't contain a valid Discord webhook link")
+    return m.group(0)
+
 def main():
     mode = sys.argv[1] if len(sys.argv) > 1 else "round"
-    hook = os.environ["OFFTOPIC_WEBHOOK_URL"].rstrip("/")
+    hook = clean_hook(os.environ.get("OFFTOPIC_WEBHOOK_URL"))
     s = load()
     {"round": round_, "leaderboard": leaderboard, "announce": announce, "halloffame": hall_of_fame}[mode](hook, s)
     save(s)

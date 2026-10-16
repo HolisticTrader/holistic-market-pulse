@@ -51,8 +51,14 @@ SPARKS = [
 ]
 ICON = {"insight": "💡 **Insight**", "test": "🧪 **Test this**", "question": "🤔 **Question of the day**"}
 
+import re as _re
+def clean_hook(v):
+    m = _re.search(r"https://(?:\w+\.)?discord(?:app)?\.com/api/webhooks/\d+/[\w-]+", v or "")
+    if not m: raise SystemExit("Webhook setting doesn't contain a valid Discord webhook link")
+    return m.group(0)
+
 def main():
-    hook = os.environ["OFFTOPIC_WEBHOOK_URL"].rstrip("/")
+    hook = clean_hook(os.environ.get("OFFTOPIC_WEBHOOK_URL"))
     try: s = json.load(open("state/spark.json"))
     except Exception: s = {"used": [], "last_type": ""}
     pool = [i for i in range(len(SPARKS)) if i not in s["used"]] or list(range(len(SPARKS)))
