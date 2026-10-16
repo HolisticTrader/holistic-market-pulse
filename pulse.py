@@ -238,6 +238,17 @@ def build(kind):
         {"title": "🪙 CRYPTO · % change", "description": table(CRYPTO)[:4000], "color": 0xF39C12},
         {"title": "📈 STOCKS · % change", "description": table(STOCKS)[:4000], "color": 0x3498DB},
     ]
+    if kind == "crypto":
+        head = f"**🪙 Weekend Crypto Pulse | {now_ct()}**"
+        embeds = [embeds[2]]
+        m = movers(CRYPTO)
+        a, ac = m[0] if m else ("BTC", 0.0)
+        content = head + "\n💬 **Your read:** " + random.choice([
+            "{a} leads the weekend move ({ac:+.2f}%). Real flow or thin-liquidity noise?",
+            "Weekend crypto: {a} {ac:+.2f}%. Are you trading it or waiting for Monday?",
+            "Where does {a} close Sunday night? Drop your level 👇"]).format(a=a, ac=ac)
+        embeds[-1]["footer"] = {"text": "30D · 90D · 6M · 1Y · YTD % change. Data: Yahoo Finance. Not financial advice."}
+        return content, embeds
     content = head
     if kind == "pulse":
         m = movers(FX + CRYPTO + STOCKS)

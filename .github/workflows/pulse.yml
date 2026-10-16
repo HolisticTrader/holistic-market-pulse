@@ -3,10 +3,9 @@ on:
   schedule:
     # Times are UTC. While Central is on daylight time (UTC-5):
     - cron: "*/15 * * * 0-5"      # live board refresh every 15 min, Sun-Fri (FX week)
-    - cron: "45 12 * * 1-5"       # 7:45 AM CT  morning pulse
-    - cron: "0 17 * * 1-5"        # 12:00 PM CT midday pulse
-    - cron: "15 20 * * 1-5"       # 3:15 PM CT  close pulse
-    - cron: "0 15 * * 6"          # Sat 10 AM CT weekend crypto check
+    - cron: "7 11-23 * * 1-5"     # weekdays hourly 6 AM-6 PM CT
+    - cron: "7 0-3 * * 2-6"       # weekdays hourly 7-10 PM CT (still the CT weekday)
+    - cron: "17 */4 * * 0,6"      # weekends: crypto-only every 4 hours
   push:
     paths: ["board_refresh.txt"]   # editing this file forces a board refresh
   workflow_dispatch:
@@ -28,6 +27,7 @@ jobs:
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then echo "mode=${{ inputs.mode }}" >> $GITHUB_OUTPUT;
           elif [ "${{ github.event_name }}" = "push" ]; then echo "mode=board" >> $GITHUB_OUTPUT;
           elif [ "${{ github.event.schedule }}" = "*/15 * * * 0-5" ]; then echo "mode=board" >> $GITHUB_OUTPUT;
+          elif [ "${{ github.event.schedule }}" = "17 */4 * * 0,6" ]; then echo "mode=crypto" >> $GITHUB_OUTPUT;
           else echo "mode=pulse" >> $GITHUB_OUTPUT; fi
       - name: Run
         env:
