@@ -18,7 +18,7 @@ jobs:
           python-version: "3.12"
       - name: Post
         env:
-          OFFTOPIC_WEBHOOK_URL: ${{ secrets.OFFTOPIC_WEBHOOK_URL || secrets.DISCORD_WEBHOOK_URL }}
+          OFFTOPIC_WEBHOOK_URL: ${{ secrets.OFFTOPIC_WEBHOOK_URL || vars.OFFTOPIC_WEBHOOK_URL || secrets.DISCORD_WEBHOOK_URL }}
         run: python spark.py
       - name: Save state
         run: |
