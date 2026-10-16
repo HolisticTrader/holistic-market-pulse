@@ -29,5 +29,6 @@ jobs:
       - name: Run
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
           BOARD_MESSAGE_ID: ${{ vars.BOARD_MESSAGE_ID || '1560756485061873665' }}
         run: python pulse.py ${{ steps.m.outputs.mode }}

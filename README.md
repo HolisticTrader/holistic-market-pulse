@@ -22,3 +22,21 @@ Posts to your Discord #general through the "Holistic Market Pulse" webhook. Runs
 - GitHub's scheduler can run a few minutes late under load.
 - Update your open calls in the `CALLS` list at the top of `pulse.py`.
 - Keep the webhook link secret. To revoke, delete the webhook in Discord.
+
+## Auto-tracking new calls
+The board's "On our calls" section also reads new calls from **#trade-alert** (needs `DISCORD_BOT_TOKEN`) and from your **Substack feed** (no setup). Write calls in this format so the bot can read them:
+
+```
+$USDJPY (Weekly) — Long
+Entry: 155.00–156.00
+Target: T1 160.50
+Invalid: weekly close below 153.40
+```
+Any ticker works: forex pairs ($USDJPY), gold ($XAUUSD), crypto ($BTC), stocks ($NVDA). Needs the ticker, long/short, and a target or invalidation.
+To remove one: post `Closed $USDJPY`. A newer call on the same ticker replaces the old one. The board shows the newest 12.
+
+### One-time bot setup (for #trade-alert)
+1. discord.com/developers/applications → New Application → "Holistic Market Pulse".
+2. Bot tab → Reset Token → copy it. On the same page, turn ON "Message Content Intent" → Save.
+3. OAuth2 → URL Generator → scope `bot` → permissions `View Channels` + `Read Message History` → open the URL → add to Holistic Traders.
+4. GitHub repo → Settings → Secrets and variables → Actions → New secret `DISCORD_BOT_TOKEN` = the token.

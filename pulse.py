@@ -70,9 +70,103 @@ def movers(rows):
             out.append((name, c))
     return sorted(out, key=lambda x: abs(x[1]), reverse=True)
 
+
+# ---------- Auto-tracked calls from #trade-alert and Substack ----------
+import re, html
+TRADE_ALERT_CHANNEL = os.environ.get("TRADE_ALERT_CHANNEL_ID", "1546270988100960297")
+SUBSTACK_FEED = os.environ.get("SUBSTACK_FEED", "https://immaculatetonyeth.substack.com/feed")
+TRADER_NAME = os.environ.get("TRADER_NAME", "immaculatetony").lower()
+CCY = {"USD","EUR","GBP","JPY","AUD","NZD","CAD","CHF","ZAR","MXN","NOK","SEK","DKK","SGD","HKD","TRY","PLN","CNH","HUF","CZK"}
+CRYPTO_SYMS = {"BTC","ETH","SOL","XRP","ADA","DOGE","AVAX","LINK","DOT","LTC","BNB","MATIC","SUI"}
+NUM = r"(\d+(?:,\d{3})*(?:\.\d+)?)"
+
+def yahoo_symbol(t):
+    t = t.upper().replace("/", "")
+    if t in ("XAUUSD", "GOLD"): return "GC=F", "Gold"
+    if t in ("XAGUSD", "SILVER"): return "SI=F", "Silver"
+    if t in ("DXY",): return "DX-Y.NYB", "DXY"
+    if len(t) == 6 and t[:3] in CCY and t[3:] in CCY: return t + "=X", t[:3] + "/" + t[3:]
+    base = t[:-3] if t.endswith("USD") and t[:-3] in CRYPTO_SYMS else t[:-4] if t.endswith("USDT") else t
+    if base in CRYPTO_SYMS: return base + "-USD", base
+    return t, t
+
+def _f(x): return float(x.replace(",", ""))
+
+def parse_calls(text):
+    """Find trade cards like:
+    $USDJPY (Weekly) - Long | Entry: 155-156 | Target: T1 160 | Invalid: weekly close below 153.5
+    Also 'Closed $USDJPY' removes a call. Returns list of (action, tuple)."""
+    out = []
+    text = html.unescape(re.sub(r"<[^>]+>", "\n", text))
+    for m in re.finditer(r"(?i)\b(closed|close|exit(?:ed)?|out of|stopped out of|invalidated)\s*:?\s*\$([A-Za-z/]{3,10})", text):
+        out.append(("close", m.group(2)))
+    # split into chunks starting at each $TICKER
+    for chunk in re.split(r"(?=\$[A-Za-z][A-Za-z/]{2,9}\b)", text):
+        m = re.match(r"\$([A-Za-z/]{3,10})", chunk)
+        if not m: continue
+        chunk = chunk[:600]
+        d = re.search(r"(?i)\b(long|short|buy|sell|bullish|bearish)\b", chunk)
+        tg = re.search(r"(?i)\b(?:target|tp|t1)\b[^\n]{0,30}?(?<![A-Za-z\d.,])" + NUM, chunk)
+        iv = re.search(r"(?i)\b(?:invalid(?:ation)?|stop(?:\s*loss)?|sl|wrong)\b[^\n]{0,40}?(?<![A-Za-z\d.,])" + NUM, chunk)
+        if not d or not (tg or iv): continue
+        side = "long" if d.group(1).lower() in ("long", "buy", "bullish") else "short"
+        sym, name = yahoo_symbol(m.group(1))
+        out.append(("open", (name, sym, side, _f(tg.group(1)) if tg else None, _f(iv.group(1)) if iv else None)))
+    return out
+
+def _get(url, headers=None):
+    req = urllib.request.Request(url, headers={**UA, **(headers or {})})
+    with urllib.request.urlopen(req, timeout=20) as r:
+        return r.read().decode("utf-8", "replace")
+
+def discord_alert_texts():
+    tok = os.environ.get("DISCORD_BOT_TOKEN", "").strip()
+    if not tok: return []
+    try:
+        msgs = json.loads(_get(f"https://discord.com/api/v10/channels/{TRADE_ALERT_CHANNEL}/messages?limit=100",
+                               {"Authorization": f"Bot {tok}"}))
+    except Exception as e:
+        print("discord read failed:", e); return []
+    texts = []
+    for m in reversed(msgs):  # oldest first, so newer posts override
+        a = m.get("author", {})
+        who = (a.get("username", "") + " " + (a.get("global_name") or "")).lower()
+        if a.get("bot") or TRADER_NAME not in who: continue
+        body = m.get("content", "") + "\n" + "\n".join((e.get("description") or "") for e in m.get("embeds", []))
+        texts.append((m.get("timestamp", ""), body))
+    return texts
+
+def substack_texts():
+    try:
+        xml = _get(SUBSTACK_FEED)
+    except Exception as e:
+        print("substack read failed:", e); return []
+    items = re.findall(r"<item>(.*?)</item>", xml, re.S)[:15]
+    out = []
+    for it in items:
+        date = (re.search(r"<pubDate>(.*?)</pubDate>", it) or [None, ""])[1]
+        body = (re.search(r"<content:encoded><!\[CDATA\[(.*?)\]\]></content:encoded>", it, re.S) or [None, ""])[1]
+        try:
+            ts = datetime.datetime.strptime(date.strip(), "%a, %d %b %Y %H:%M:%S %Z").isoformat()
+        except Exception:
+            ts = ""
+        out.append((ts, body[:20000]))
+    return out
+
+def all_calls():
+    calls = {c[1]: c for c in CALLS}
+    feed = sorted(substack_texts() + discord_alert_texts(), key=lambda x: x[0])
+    for _, text in feed:
+        for action, val in parse_calls(text):
+            if action == "close":
+                calls.pop(yahoo_symbol(val)[0], None)
+            else:
+                calls[val[1]] = val
+    return list(calls.values())
+
 def calls_block():
     lines = []
-    for name, sym, side, tgt, inv in CALLS:
+    for name, sym, side, tgt, inv in all_calls()[-12:]:  # newest 12 to stay under Discord's 2000-char limit
         p, _ = quote(sym)
         if p is None:
             continue
@@ -82,7 +176,7 @@ def calls_block():
             bits.append("T1 hit ✅" if dist <= 0 else f"{dist:.1f}% to T1 ({tgt:g})")
         if inv is not None:
             room = (p - inv) / p * 100 * (1 if side == "long" else -1)
-            bits.append("INVALIDATED ❌" if room <= 0 else f"{room:.1f}% above stop line ({inv:g})" if side == "long" else f"{room:.1f}% below stop line ({inv:g})")
+            bits.append("INVALIDATED ❌" if room <= 0 else f"{room:.1f}% from stop ({inv:g})")
         lines.append("• " + " | ".join(bits))
     return "\n".join(lines)
 
