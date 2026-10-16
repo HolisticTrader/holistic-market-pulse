@@ -7,6 +7,8 @@ on:
     - cron: "0 17 * * 1-5"        # 12:00 PM CT midday pulse
     - cron: "15 20 * * 1-5"       # 3:15 PM CT  close pulse
     - cron: "0 15 * * 6"          # Sat 10 AM CT weekend crypto check
+  push:
+    paths: ["board_refresh.txt"]   # editing this file forces a board refresh
   workflow_dispatch:
     inputs:
       mode:
@@ -24,6 +26,7 @@ jobs:
         id: m
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then echo "mode=${{ inputs.mode }}" >> $GITHUB_OUTPUT;
+          elif [ "${{ github.event_name }}" = "push" ]; then echo "mode=board" >> $GITHUB_OUTPUT;
           elif [ "${{ github.event.schedule }}" = "*/15 * * * 0-5" ]; then echo "mode=board" >> $GITHUB_OUTPUT;
           else echo "mode=pulse" >> $GITHUB_OUTPUT; fi
       - name: Run

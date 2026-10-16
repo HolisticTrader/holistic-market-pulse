@@ -9,7 +9,7 @@ Env:
   BOARD_MESSAGE_ID     (optional; set after first `board` run prints it)
 Standard library only. Data: Yahoo Finance chart API (may be delayed).
 """
-import json, os, sys, urllib.request, urllib.error, datetime, random
+import json, os, sys, urllib.request, urllib.error, urllib.parse, datetime, random
 
 FX = [("EURUSD=X","EUR/USD",5),("GBPUSD=X","GBP/USD",5),("USDJPY=X","USD/JPY",3),("DX-Y.NYB","DXY",2),
       ("GBPJPY=X","GBP/JPY",3),("AUDJPY=X","AUD/JPY",3),("CHFJPY=X","CHF/JPY",3),("NZDJPY=X","NZD/JPY",3),
@@ -36,30 +36,57 @@ CALLS = [
 UA = {"User-Agent": "Mozilla/5.0 (HolisticMarketPulse)"}
 
 import functools
+PERIODS = [("30D", 30), ("90D", 90), ("6M", 182), ("1Y", 365), ("YTD", None)]
+
 @functools.lru_cache(maxsize=None)
-def quote(sym):
+def history(sym):
+    """Latest price plus daily closes for the past year: (price, [(date, close), ...])."""
     for host in ("query1", "query2"):
-        url = f"https://{host}.finance.yahoo.com/v8/finance/chart/{urllib.parse.quote(sym)}?range=1d&interval=5m"
+        url = f"https://{host}.finance.yahoo.com/v8/finance/chart/{urllib.parse.quote(sym)}?range=1y&interval=1d"
         try:
             with urllib.request.urlopen(urllib.request.Request(url, headers=UA), timeout=15) as r:
-                m = json.load(r)["chart"]["result"][0]["meta"]
-                p = m["regularMarketPrice"]; pc = m.get("chartPreviousClose") or m.get("previousClose")
-                return p, (p / pc - 1) * 100 if pc else 0.0
+                res = json.load(r)["chart"]["result"][0]
+                closes = res["indicators"]["quote"][0]["close"]
+                pts = [(datetime.date.fromtimestamp(t), c) for t, c in zip(res["timestamp"], closes) if c]
+                return res["meta"]["regularMarketPrice"], pts
         except Exception:
             continue
-    return None, None
+    return None, []
+
+def quote(sym):
+    """(price, 1-day % change) kept for call tracking and movers."""
+    p, pts = history(sym)
+    if p is None or len(pts) < 2: return p, 0.0 if p else None
+    prev = pts[-2][1] if pts[-1][0] == datetime.date.today() else pts[-1][1]
+    return p, (p / prev - 1) * 100
+
+def perf(sym):
+    """% change over each period in PERIODS, using the last close on/before the start date."""
+    p, pts = history(sym)
+    if p is None or not pts: return None, {}
+    today = datetime.date.today()
+    out = {}
+    for label, days in PERIODS:
+        start = datetime.date(today.year, 1, 1) if days is None else today - datetime.timedelta(days=days)
+        base = None
+        for d, c in pts:
+            if d <= start: base = c
+            else: break
+        if base is None and days is None: base = next((c for d, c in pts if d >= start), None)
+        out[label] = (p / base - 1) * 100 if base else None
+    return p, out
 
 import urllib.parse
 
 def table(rows):
-    lines = []
+    head = f"{'':<8}{'Price':>9}" + "".join(f"{l:>6}" for l, _ in PERIODS)
+    lines = [head]
     for sym, name, d in rows:
-        p, c = quote(sym)
+        p, ch = perf(sym)
         if p is None:
-            lines.append(f"{name:<9}{'n/a':>10}")
-            continue
-        arrow = "▲" if c > 0 else "▼" if c < 0 else "•"
-        lines.append(f"{name:<9}{p:>10.{d}f}  {arrow} {c:+.2f}%")
+            lines.append(f"{name:<8}{'n/a':>9}"); continue
+        cells = "".join(f"{('%+.1f' % ch[l]) if ch.get(l) is not None else '-':>6}" for l, _ in PERIODS)
+        lines.append(f"{name[:7]:<8}{p:>9.{d}f}{cells}")
     return "```\n" + "\n".join(lines) + "\n```"
 
 def movers(rows):
@@ -197,18 +224,23 @@ QUESTIONS = [
 ]
 
 def build(kind):
+    """Returns (content, embeds). Tables go in embeds so the multi-period columns fit Discord's limits."""
     head = f"**📡 Holistic Market Pulse | {now_ct()}**" if kind == "pulse" else f"**📊 LIVE BOARD** · updated {now_ct()}"
-    parts = [head, "", "**💱 FOREX**", table(FX), "**🎯 On our calls**", calls_block(), "",
-             "**🪙 CRYPTO**", table(CRYPTO), "**📈 STOCKS**", table(STOCKS)]
+    embeds = [
+        {"title": "💱 FOREX · % change", "description": table(FX)[:4000], "color": 0x2ECC71},
+        {"title": "🎯 On our calls", "description": (calls_block() or "No open calls.")[:4000], "color": 0xD4AF37},
+        {"title": "🪙 CRYPTO · % change", "description": table(CRYPTO)[:4000], "color": 0xF39C12},
+        {"title": "📈 STOCKS · % change", "description": table(STOCKS)[:4000], "color": 0x3498DB},
+    ]
+    content = head
     if kind == "pulse":
         m = movers(FX + CRYPTO + STOCKS)
         q = random.choice(QUESTIONS)
         a, ac = m[0] if m else ("Gold", 0.0)
         b, bc = m[1] if len(m) > 1 else ("DXY", 0.0)
-        parts += [f"💬 **Your read:** " + q.format(a=a, ac=ac, b=b, bc=bc)]
-    parts += ["", "-# Data: Yahoo Finance, may be delayed. Not financial advice."]
-    msg = "\n".join(parts)
-    return msg[:1990]
+        content += "\n💬 **Your read:** " + q.format(a=a, ac=ac, b=b, bc=bc)
+    embeds[-1]["footer"] = {"text": "30D · 90D · 6M · 1Y · YTD % change. Data: Yahoo Finance, may be delayed. Not financial advice."}
+    return content, embeds
 
 def send(url, payload, method="POST"):
     req = urllib.request.Request(url, data=json.dumps(payload).encode(), method=method,
@@ -219,7 +251,8 @@ def send(url, payload, method="POST"):
 def main():
     kind = sys.argv[1] if len(sys.argv) > 1 else "pulse"
     hook = os.environ["DISCORD_WEBHOOK_URL"].rstrip("/")
-    payload = {"content": build(kind), "username": "Holistic Market Pulse", "allowed_mentions": {"parse": []}}
+    content, embeds = build(kind)
+    payload = {"content": content, "embeds": embeds, "username": "Holistic Market Pulse", "allowed_mentions": {"parse": []}}
     mid = os.environ.get("BOARD_MESSAGE_ID", "").strip()
     if kind == "board" and not mid and os.environ.get("GITHUB_EVENT_NAME") == "schedule":
         print("No BOARD_MESSAGE_ID yet: skipping scheduled board run (run 'board' manually once to create it).")
