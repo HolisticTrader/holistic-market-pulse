@@ -1,0 +1,39 @@
+name: Holistic Welcome
+on:
+  schedule:
+    - cron: "*/15 * * * *"     # check for new members every 15 min
+  push:
+    paths: ["welcome_launch.txt"]   # editing this file posts the @everyone welcome
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "new or everyone"
+        default: "new"
+permissions:
+  contents: write
+concurrency: welcome
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Pick mode
+        id: m
+        run: |
+          if [ "${{ github.event_name }}" = "push" ]; then echo "mode=everyone" >> $GITHUB_OUTPUT;
+          elif [ "${{ github.event_name }}" = "workflow_dispatch" ]; then echo "mode=${{ inputs.mode }}" >> $GITHUB_OUTPUT;
+          else echo "mode=new" >> $GITHUB_OUTPUT; fi
+      - name: Run
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
+        run: python welcome.py ${{ steps.m.outputs.mode }}
+      - name: Save state
+        run: |
+          git config user.name "holistic-welcome-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add state/ 2>/dev/null || true
+          git diff --cached --quiet || (git commit -m "welcome state [skip ci]" && git pull --rebase && git push)

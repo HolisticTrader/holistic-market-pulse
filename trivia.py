@@ -208,11 +208,15 @@ def leaderboard(hook, s):
     med = ["🥇", "🥈", "🥉"] + ["▫️"] * 7
     rows = []
     for k, (u, p) in enumerate(top):
-        e, _, nm = belt(s["total"].get(u, 0)); st = s["streak"].get(u, 0)
+        _, e, nm = belt(s["total"].get(u, 0)); st = s["streak"].get(u, 0)
         rows.append(f"{med[k]} **{s['names'].get(u, 'trader')}** · {p} pts {e} {nm} Belt" + (f" · 🔥{st}-day streak" if st >= 2 else ""))
     txt = f"🥋 **Holistic Traders Dojo · Week {wk[-2:]} standings**\n" + "\n".join(rows)
+    at = sorted(s["total"].items(), key=lambda x: -x[1])[:5]
+    if at:
+        txt += "\n\n🏛️ **All-time Hall of Fame**\n" + "\n".join(
+            f"{['👑','2.','3.','4.','5.'][k]} **{s['names'].get(u, 'trader')}** · {p} pts {belt(p)[1]} {belt(p)[2]} Belt" for k, (u, p) in enumerate(at))
     if promos:
-        txt += "\n\n🎖️ **Belt promotions:** " + ", ".join(f"<@{u}> → {belt(s['total'][u])[0]} {belt(s['total'][u])[2]}" for u in promos)
+        txt += "\n\n🎖️ **Belt promotions:** " + ", ".join(f"<@{u}> → {belt(s['total'][u])[1]} {belt(s['total'][u])[2]}" for u in promos)
     txt += ("\n\n-# Points: correct answer 3 · any vote 1 · active in chat 1/msg (max 5/day) · 3+ day streak +2/day. "
             "Belts: ⚪→🟡10→🟠25→🟢50→🔵100→🟣175→🟤275→⚫400 (all-time). Weekly board resets Monday.")
     say(hook, txt, users=promos)
