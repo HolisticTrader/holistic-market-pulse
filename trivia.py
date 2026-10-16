@@ -221,6 +221,31 @@ def leaderboard(hook, s):
             "Belts: ⚪→🟡10→🟠25→🟢50→🔵100→🟣175→🟤275→⚫400 (all-time). Weekly board resets Monday.")
     say(hook, txt, users=promos)
 
+def hall_of_fame(hook, s):
+    """Friday-morning all-time leaderboard."""
+    tok = os.environ.get("DISCORD_BOT_TOKEN", "").strip()
+    if tok:
+        score_polls(s, tok); score_activity(s, tok); sync_belt_roles(s, tok)
+    top = sorted(s["total"].items(), key=lambda x: -x[1])[:10]
+    if not top:
+        say(hook, "🏛️ **Holistic Traders Hall of Fame**\nNo all-time points on the board yet. Every trivia vote and every message counts. Be the first name up here. 🥋"
+            + ("" if tok else "\n-# Scoring switches on once the server bot is connected."))
+        return
+    marks = ["👑", "🥈", "🥉"] + [f"{i}." for i in range(4, 11)]
+    rows = "\n".join(f"{marks[k]} **{s['names'].get(u, 'trader')}** · {p} pts · {belt(p)[1]} {belt(p)[2]} Belt"
+                     + (f" · 🔥{s['streak'].get(u)}-day streak" if s["streak"].get(u, 0) >= 2 else "")
+                     for k, (u, p) in enumerate(top))
+    counts = {}
+    for p in s["total"].values():
+        counts[belt(p)[2]] = counts.get(belt(p)[2], 0) + 1
+    dojo = " · ".join(f"{e} {counts[nm]}" for _, e, nm in BELTS if counts.get(nm))
+    leader = top[0]
+    nxt = next((need for need, _, _ in BELTS if need > leader[1]), None)
+    tail = (f"\n\n{s['names'].get(leader[0], 'Our leader')} is {nxt - leader[1]} pts from the next belt. Who's catching them? 👀"
+            if nxt else f"\n\n{s['names'].get(leader[0], 'Our leader')} is a ⚫ Black Belt. Respect. 🙏")
+    say(hook, f"🏛️ **Holistic Traders Hall of Fame · all-time**\n{rows}\n\n**The dojo right now:** {dojo}{tail}\n"
+              "-# Every Friday morning. Points never reset here. Belts: ⚪→🟡10→🟠25→🟢50→🔵100→🟣175→🟤275→⚫400")
+
 def announce(hook, s):
     general = os.environ.get("DISCORD_WEBHOOK_URL", "").rstrip("/")
     try: ch = req(hook).get("channel_id")
@@ -242,7 +267,7 @@ def main():
     mode = sys.argv[1] if len(sys.argv) > 1 else "round"
     hook = os.environ["OFFTOPIC_WEBHOOK_URL"].rstrip("/")
     s = load()
-    {"round": round_, "leaderboard": leaderboard, "announce": announce}[mode](hook, s)
+    {"round": round_, "leaderboard": leaderboard, "announce": announce, "halloffame": hall_of_fame}[mode](hook, s)
     save(s)
 
 if __name__ == "__main__":

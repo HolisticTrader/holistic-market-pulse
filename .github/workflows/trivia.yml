@@ -5,6 +5,7 @@ on:
     - cron: "0 13,15,17,19,21,23 * * *"
     - cron: "0 1 * * *"
     - cron: "30 2 * * *"
+    - cron: "40 13 * * 5"   # Friday 8:40 AM CT all-time Hall of Fame
   push:
     paths: ["launch.txt", "round.txt"]   # launch.txt = announcement, round.txt = run a round now
   workflow_dispatch:
@@ -32,6 +33,7 @@ jobs:
           elif [ "${{ github.event_name }}" = "push" ]; then
             if git diff --name-only HEAD~1 HEAD | grep -q '^launch.txt$'; then echo "mode=announce" >> $GITHUB_OUTPUT; else echo "mode=round" >> $GITHUB_OUTPUT; fi
           elif [ "${{ github.event.schedule }}" = "30 2 * * *" ]; then echo "mode=leaderboard" >> $GITHUB_OUTPUT;
+          elif [ "${{ github.event.schedule }}" = "40 13 * * 5" ]; then echo "mode=halloffame" >> $GITHUB_OUTPUT;
           else echo "mode=round" >> $GITHUB_OUTPUT; fi
       - name: Run
         env:
