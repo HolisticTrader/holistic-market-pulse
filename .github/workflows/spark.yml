@@ -19,8 +19,17 @@ jobs:
       - name: Post
         env:
           OFFTOPIC_WEBHOOK_URL: ${{ secrets.OFFTOPIC_WEBHOOK_URL || vars.OFFTOPIC_WEBHOOK_URL || secrets.DISCORD_WEBHOOK_URL }}
-        run: python spark.py
+          VAR_HOOK: ${{ vars.OFFTOPIC_WEBHOOK_URL }}
+        run: |
+          mkdir -p state
+          python - <<'PY' > state/diag.txt
+          import os
+          v = os.environ.get("VAR_HOOK", "")
+          print("var_len", len(v), "starts", repr(v[:45]), "has_secret", bool(os.environ.get("OFFTOPIC_WEBHOOK_URL")))
+          PY
+          python spark.py 2>&1 | tee -a state/diag.txt; exit ${PIPESTATUS[0]}
       - name: Save state
+        if: always()
         run: |
           git config user.name "holistic-spark-bot"
           git config user.email "actions@users.noreply.github.com"
