@@ -78,15 +78,21 @@ def perf(sym):
 
 import urllib.parse
 
+def _px(p):
+    return f"{p:.0f}" if p >= 1000 else f"{p:.2f}" if p >= 100 else f"{p:.3f}" if p >= 10 else f"{p:.4f}"
+
+def _pc(v):
+    if v is None: return "-"
+    return f"{v:+.0f}" if abs(v) >= 10 else f"{v:+.1f}"
+
 def table(rows):
-    head = f"{'':<8}{'Price':>9}" + "".join(f"{l:>6}" for l, _ in PERIODS)
-    lines = [head]
+    """Compact (~39 chars/row) so it doesn't wrap on phones."""
+    lines = [f"{'':<7}{'Price':>7}" + "".join(f"{l:>5}" for l, _ in PERIODS)]
     for sym, name, d in rows:
         p, ch = perf(sym)
         if p is None:
-            lines.append(f"{name:<8}{'n/a':>9}"); continue
-        cells = "".join(f"{('%+.1f' % ch[l]) if ch.get(l) is not None else '-':>6}" for l, _ in PERIODS)
-        lines.append(f"{name[:7]:<8}{p:>9.{d}f}{cells}")
+            lines.append(f"{name[:7]:<7}{'n/a':>7}"); continue
+        lines.append(f"{name.replace('/', '')[:7]:<7}{_px(p):>7}" + "".join(f"{_pc(ch.get(l)):>5}" for l, _ in PERIODS))
     return "```\n" + "\n".join(lines) + "\n```"
 
 def movers(rows):
