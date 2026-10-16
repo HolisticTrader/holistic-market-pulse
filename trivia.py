@@ -175,7 +175,14 @@ def sync_belt_roles(s, tok):
             try: req(f"https://discord.com/api/v10/guilds/{GUILD}/members/{uid}/roles/{want}", method="PUT", auth=auth)
             except Exception as e: print("add role failed", uid, e)
 
+def reveal_last(hook, s):
+    if s.get("last") is None: return
+    q, o, a, why = QUESTIONS[s["last"]]
+    say(hook, f"✅ **Tonight's last answer:** {q}\n**{L[a]}. {o[a]}**\n> {why}\n\nNew rounds start 8 AM CT. 🥋")
+    s["last"] = None
+
 def leaderboard(hook, s):
+    reveal_last(hook, s)
     tok = os.environ.get("DISCORD_BOT_TOKEN", "").strip()
     wk = ct().strftime("%G-W%V")
     if s["week"] != wk: s["week"], s["week_pts"] = wk, {}
