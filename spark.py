@@ -2,7 +2,7 @@
 """Morning Spark: one insight, test, or question every morning in #off-topic.
 Env: OFFTOPIC_WEBHOOK_URL (falls back to DISCORD_WEBHOOK_URL in the workflow).
 State: state/spark.json (no repeats until the bank is used up)."""
-import json, os, random, urllib.request
+import json, os, random, urllib.request, urllib.error
 
 SPARKS = [
  # ---------- insights ----------
@@ -71,7 +71,12 @@ def main():
     text += "\n\n💬 Reply below. Good answers earn activity points toward your belt 🥋"
     req = urllib.request.Request(hook + "?wait=true", data=json.dumps({"content": text, "username": "Holistic Trivia", "allowed_mentions": {"parse": []}}).encode(),
                                  headers={"Content-Type": "application/json", "User-Agent": "Mozilla/5.0 (HolisticSpark)"})
-    urllib.request.urlopen(req, timeout=20).read()
+    try:
+        urllib.request.urlopen(req, timeout=20).read()
+    except urllib.error.HTTPError as e:
+        print("Discord rejected the post:", e.code, e.read()[:200]); raise
+    except Exception as e:
+        print("Could not reach the webhook (check the OFFTOPIC_WEBHOOK_URL value):", type(e).__name__); raise
     os.makedirs("state", exist_ok=True); json.dump(s, open("state/spark.json", "w"))
     print("posted spark", i, kind)
 
