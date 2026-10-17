@@ -4,7 +4,7 @@
 // Bind Cloudflare Workers AI as `AI`. Optional var: MODEL (default below),
 // DAILY_LIMIT (per member, default 15)
 //
-// Commands: /analyze /journal /risk /coach /style /ask-mentor /lesson
+// Commands: /analyze /analyze-chart /journal /risk /coach /style /ask-mentor /lesson
 //           /study-plan /challenge /quiz /battle /tournament
 // /risk is plain math (no AI). The others call Workers AI with a strict
 // "educate, quantify risk, never predict" system prompt.
@@ -12,7 +12,7 @@
 const DEFAULT_MODEL = "@cf/meta/llama-4-scout-17b-16e-instruct";
 
 const SYSTEM = `You are Holistic Coach, the trading mentor bot for the Holistic Traders Discord.
-House method: swing trading supply and demand. Buy wholesale (demand), sell retail (supply). Every trade needs an entry zone, a target, and an invalidation level, judged on weekly closes. Small risk per trade (usually 0.5-2%), wide stops, patience. Many members are working prop-firm challenges, so daily-loss and max-drawdown rules matter. The course pages are links, not an indexed lesson library: never claim that a specific rule or Fib anchor came from a course unless the member supplies that lesson text.
+House method: swing trading supply and demand. Prioritize the member's Holistic Traders course when its lesson is supplied. Use Sam Seiden's public supply/demand concepts as a clearly attributed reference: identify the base before a strong departure, prefer fresh/unmitigated areas, and treat zones as candidates pending price response. Fibonacci is a confluence lens only, using exactly 0, 0.382, 0.618, 1 and 1.618. Explain that the mechanical zone finder is an approximation, not a verified transcription of any named instructor's complete method. Apply Mark Douglas's probability mindset: any single outcome is uncertain; judge rule-following across a sample. Attribute acceptance of losses and process discipline to Tom Hougaard's Best Loser Wins themes; never translate those themes into encouragement to increase risk. Every idea needs an entry area, target, and invalidation level. The course pages are links, not an indexed lesson library: never claim that a specific rule or Fib anchor came from a course unless the member supplies that lesson text.
 
 Rules you never break:
 - You do not predict where price will go and you never say a trade "will" work. Talk in scenarios: "if X holds... if Y breaks...".
@@ -25,8 +25,8 @@ Rules you never break:
 
 const STYLES = {
   risk: { label: "🛡️ The Risk Manager", prompt: "Coaching style: THE RISK MANAGER. Lead with position size, % risked, total exposure, correlated positions, and drawdown math. Challenge anything above 2% risk or stacked exposure in the same currency. Ask: 'What happens to the account if this and your other open trades all stop out?'" },
-  technical: { label: "📐 The Technical Analyst", prompt: "Coaching style: THE TECHNICAL ANALYST. Lead with structure: trend on the weekly, wholesale (demand) and retail (supply) zones, prior highs and lows, where invalidation sits on the chart. Teach how to read it, not what will happen." },
-  psych: { label: "🧠 The Psychologist", prompt: "Coaching style: THE PSYCHOLOGIST. Lead with behavior and emotion. Ask about impulsive entries, revenge trading after losses, FOMO, boredom trades, moving stops, and how they felt before clicking. Be curious and non-judgmental, and ask one or two reflective questions." },
+  technical: { label: "📐 The Technical Analyst", prompt: "Coaching style: THE TECHNICAL ANALYST. Lead with monthly then weekly structure; identify candidate supply/demand from a compact base followed by decisive departure, favor fresh areas, and distinguish a zone from confirmation. Use the five specified Fib ratios only as confluence. Attribute these public concepts to Sam Seiden as reference, while labeling the automated detector as an approximation. Teach how to read it, not what will happen." },
+  psych: { label: "🧠 The Psychologist", prompt: "Coaching style: THE PSYCHOLOGIST. Lead with behavior and emotion. Apply Mark Douglas's probability mindset: one trade is uncertain; focus on executing a tested plan over a sample. Attribute loss acceptance/process discipline themes to Tom Hougaard's Best Loser Wins. Ask about impulsive entries, revenge trading after losses, FOMO, boredom trades, moving stops, and how they felt before clicking. Be curious and non-judgmental, ask one or two reflective questions, and never suggest increasing risk to tolerate losses." },
   prop: { label: "🏦 The Prop Firm Coach", prompt: "Coaching style: THE PROP FIRM COACH. Lead with challenge rules: daily loss limit, max drawdown, consistency rules, minimum trading days, news restrictions, and weekend holding. Translate every idea into 'does this keep the account alive and passing?'. Rules differ by firm, so tell them to confirm with their firm's own rulebook." },
 };
 const DEFAULT_STYLE = "technical";
@@ -36,6 +36,11 @@ const COURSE = {
   ebook: "https://holistictrader.gumroad.com/l/holistictraders",
   substack: "https://immaculatetonyeth.substack.com/",
 };
+const FRAMEWORKS = [
+  "📐 [Sam Seiden public supply/demand session](https://www.youtube.com/watch?v=qK-PhsE1m8Y) — a credited reference for base/departure concepts.",
+  "🧠 [Mark Douglas, Trading in the Zone](https://www.penguinrandomhouse.com/books/350665/trading-in-the-zone-by-mark-douglas/) — probability and execution mindset.",
+  "🛡️ [Tom Hougaard, Best Loser Wins](https://www.panmacmillan.com/authors/tom-hougaard/best-loser-wins/9780857198228) — accepting losses and process under risk.",
+];
 
 const QUIZZES = [
   { q: "A trader risks 1% of a $10,000 account on one idea. What is the planned loss at the stop?", a: "b", choices: "A) $10   B) $100   C) $1,000", explain: "$10,000 × 1% = $100." },
@@ -110,7 +115,7 @@ async function handleQuiz(env, data, userId, command) {
   if (!env.LIMITS) return "The learning game needs the Cloudflare KV binding named `LIMITS` for questions and scores. Ask an admin to finish setup.";
   if (command === "tournament") {
     const score = Number((await env.LIMITS.get(`score:${userId}`)) || 0);
-    return `🏆 **Weekly practice standings**\nYour completed quiz points: **${score}**. Tournaments are practice-only; there are no live-market predictions or financial prizes configured. Members can use `/quiz` for the next historical/simulated question.`;
+    return `🏆 **Weekly practice standings**\nYour completed quiz points: **${score}**. Tournaments are practice-only; there are no live-market predictions or financial prizes configured. Members can use /quiz for the next historical/simulated question.`;
   }
   const answer = String(opt(data, "answer") || "").trim().toLowerCase();
   const pendingKey = `quiz:${userId}`;
@@ -127,7 +132,7 @@ async function handleQuiz(env, data, userId, command) {
   }
   const q = QUIZZES[Math.floor(Math.random() * QUIZZES.length)];
   await putRecord(env, pendingKey, { answer: q.a, explain: q.explain }, 600);
-  return `${command === "battle" ? "⚔️ **Battle Arena · simulated round**" : "🧠 **Practice quiz · historical/simulated**"}\n${q.q}\n${q.choices}\nReply with `/quiz answer:a` (or b/c) to check. This is a learning game, not a live-market call.`;
+  return `${command === "battle" ? "⚔️ **Battle Arena · simulated round**" : "🧠 **Practice quiz · historical/simulated**"}\n${q.q}\n${q.choices}\nReply with /quiz answer:a (or b/c) to check. This is a learning game, not a live-market call.`;
 }
 
 async function getStyle(env, userId, override) {
@@ -213,26 +218,57 @@ function latestSwing(rows) {
   return null;
 }
 
+function freshBaseZone(rows) {
+  // Transparent mechanical approximation: compact 1–3 candle base, then a
+  // 3-candle departure >= 1.5x prior 14-bar ATR; reject zones already retested.
+  const found = [];
+  for (let end = 16; end < rows.length - 3; end++) {
+    const atrRows = rows.slice(end - 14, end);
+    const atr = atrRows.reduce((sum, r) => sum + (r.h - r.l), 0) / atrRows.length;
+    if (!(atr > 0)) continue;
+    for (let count = 1; count <= 3; count++) {
+      const start = end - count + 1, base = rows.slice(start, end + 1);
+      const avgRange = base.reduce((sum, r) => sum + (r.h - r.l), 0) / count;
+      if (avgRange > atr * .8) continue;
+      const baseHigh = Math.max(...base.map((r) => Math.max(r.o ?? r.c, r.c)));
+      const baseLow = Math.min(...base.map((r) => Math.min(r.o ?? r.c, r.c)));
+      const fullHigh = Math.max(...base.map((r) => r.h)), fullLow = Math.min(...base.map((r) => r.l));
+      const later = rows.slice(end + 1, Math.min(rows.length, end + 4));
+      const up = Math.max(...later.map((r) => r.c)) - fullHigh >= atr * 1.5;
+      const down = fullLow - Math.min(...later.map((r) => r.c)) >= atr * 1.5;
+      const side = up ? "demand" : down ? "supply" : null;
+      if (!side) continue;
+      const zone = side === "demand" ? { low: fullLow, high: baseHigh } : { low: baseLow, high: fullHigh };
+      const untouched = rows.slice(end + 4).every((r) => side === "demand" ? r.l > zone.high : r.h < zone.low);
+      if (untouched) found.push({ ...zone, side, date: rows[start].d, endDate: rows[end].d, departure: side === "demand" ? "rally" : "drop", atr });
+    }
+  }
+  return found.sort((a, b) => rows.findIndex((r) => r.d === b.endDate) - rows.findIndex((r) => r.d === a.endDate))[0] || null;
+}
+
 async function timeframeData(y, range, interval, label) {
   const r = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(y)}?range=${range}&interval=${interval}`, { headers: { "user-agent": "Mozilla/5.0" } });
   if (!r.ok) return null;
   const res = (await r.json())?.chart?.result?.[0];
   if (!res) return null;
   const q = res.indicators.quote[0];
-  const rows = res.timestamp.map((t, i) => ({ d: new Date(t * 1000).toISOString().slice(0, 10), h: q.high[i], l: q.low[i], c: q.close[i] })).filter((x) => Number.isFinite(x.h) && Number.isFinite(x.l) && Number.isFinite(x.c));
+  const rows = res.timestamp.map((t, i) => ({ d: new Date(t * 1000).toISOString().slice(0, 10), o: q.open[i], h: q.high[i], l: q.low[i], c: q.close[i] })).filter((x) => Number.isFinite(x.h) && Number.isFinite(x.l) && Number.isFinite(x.c));
   return { rows, label, price: res.meta.regularMarketPrice };
 }
 
 function fibSummary(frame) {
   if (!frame?.rows?.length) return `${frame?.label || "Timeframe"}: unavailable.`;
   const leg = latestSwing(frame.rows);
-  if (!leg) return `${frame.label}: no confirmed alternating swing pivots found.`;
-  const a = leg.start.price, b = leg.end.price, delta = b - a;
-  const levels = [0, .382, .618, 1, 1.618].map((ratio) => `${ratio}=${(a + delta * ratio).toPrecision(7)}`).join(" · ");
-  const z1 = a + delta * .382, z2 = a + delta * .618;
-  const low = Math.min(z1, z2), high = Math.max(z1, z2);
-  const side = leg.direction === "bullish" ? "potential demand/wholesale" : "potential supply/retail";
-  return `${frame.label} ${leg.direction} swing ${leg.start.d} ${a.toPrecision(7)} → ${leg.end.d} ${b.toPrecision(7)}; Fib levels (only 0, 0.382, 0.618, 1, 1.618): ${levels}. Candidate ${side} zone: ${low.toPrecision(7)}–${high.toPrecision(7)} (0.382–0.618 band). Anchor invalidation reference: 0=${a.toPrecision(7)}; 1.618 extension reference: ${(a + delta * 1.618).toPrecision(7)}.`;
+  const zone = freshBaseZone(frame.rows);
+  const fib = leg ? (() => {
+    const a = leg.start.price, b = leg.end.price, delta = b - a;
+    const levels = [0, .382, .618, 1, 1.618].map((ratio) => `${ratio}=${(a + delta * ratio).toPrecision(7)}`).join(" · ");
+    const band = [a + delta * .382, a + delta * .618].sort((x, y) => x - y);
+    const overlaps = zone && band[0] <= zone.high && band[1] >= zone.low;
+    return `${leg.direction} swing ${leg.start.d} ${a.toPrecision(7)} → ${leg.end.d} ${b.toPrecision(7)}; Fib 0, 0.382, 0.618, 1, 1.618: ${levels}. ${overlaps ? "Fib 0.382–0.618 overlaps the candidate base zone." : "Fib 0.382–0.618 does not overlap the candidate base zone."}`;
+  })() : "No confirmed alternating swing pivots for Fib context.";
+  const candidate = zone ? `Candidate ${zone.side} base zone ${zone.low.toPrecision(7)}–${zone.high.toPrecision(7)} from ${zone.date} (${zone.departure} departure); detected as fresh under the mechanical retest check.` : "No fresh qualifying base/departure zone detected.";
+  return `${frame.label}: ${candidate} ${fib}`;
 }
 
 async function marketSnapshot(sym) {
@@ -264,12 +300,12 @@ async function askModel(env, userContent, style) {
 }
 
 async function buildPrompt(name, data, resolved) {
-  if (name === "analyze") {
+  if (name === "analyze" || name === "analyze-chart") {
     const sym = String(opt(data, "symbol") || "");
     const question = opt(data, "question") || "Walk me through the structure: where is wholesale, where is retail, and what would invalidate a long or a short?";
     const att = opt(data, "chart");
     const snap = sym ? await marketSnapshot(sym) : null;
-    const parts = [{ type: "text", text: `Member asks for a chart/setup breakdown of ${sym}.\nQuestion: ${question}\n\nMarket data:\n${snap || "No data available for this symbol."}\n\nUse the weekly and monthly swing context above. Give only 1–2 Fib-derived candidate zones, use ONLY ratios 0, 0.382, 0.618, 1 and 1.618, and combine weekly/monthly bands as one zone only if they overlap. Label bullish-leg 0.382–0.618 as potential demand/wholesale and bearish-leg band as potential supply/retail. Name anchor 0/1 invalidation context and 1.618 extension reference. Do not call a band confirmed supply/demand without price reaction evidence. Then explain trend structure, bullish and bearish scenarios, what invalidates each, and the main uncertainty. No predictions.` }];
+    const parts = [{ type: "text", text: `Member asks for a chart/setup breakdown of ${sym}.\nQuestion: ${question}\n\nMarket data:\n${snap || "No data available for this symbol."}\n\nUse monthly then weekly context. Give only 1–2 candidate supply/demand zones from compact bases followed by strong departure; prefer fresh/unmitigated zones. The detector is a disclosed mechanical approximation. Combine weekly/monthly candidate zones into one if their price areas overlap; otherwise show at most one per timeframe. Use ONLY Fib ratios 0, 0.382, 0.618, 1 and 1.618; report the 0.382–0.618 overlap (or say none) as confluence, never as the definition/source of a supply/demand zone. Explain anchor 0 and 1 and the 1.618 extension reference. Attribute base/departure/freshness to Sam Seiden-inspired public supply/demand concepts; probability framing to Mark Douglas; and loss acceptance/process discipline to Tom Hougaard's Best Loser Wins. Say this community-made tool is independent and not endorsed by them. The Holistic Traders course is primary, but it is not indexed, so don't claim the detector's exact rules are from its lessons. Explain trend, scenarios, invalidation and uncertainty. No predictions.` }];
     const url = att && resolved?.attachments?.[att]?.url;
     if (url) parts.push({ type: "image", source: { type: "url", url } });
     return parts;
@@ -315,7 +351,7 @@ export default {
     const userId = i.member?.user?.id || i.user?.id;
     if (["challenge"].includes(name)) return json({ type: 4, data: { content: await handleChallenge(env, i.data, userId), flags: 64, allowed_mentions: { parse: [] } } });
     if (["quiz", "battle", "tournament"].includes(name)) return json({ type: 4, data: { content: await handleQuiz(env, i.data, userId, name), flags: name === "quiz" ? 64 : 0, allowed_mentions: { parse: [] } } });
-    if (name === "lesson") return json({ type: 4, data: { content: `📚 **Holistic Trader learning links**\nTopic requested: ${escapeText(opt(i.data, "topic") || "swing trading, supply and demand, weekly charts")}\n${LESSONS.join("\n")}\n\nThe bot does not have lesson-by-lesson indexing yet. Open the course or paste a lesson excerpt into `/ask-mentor` for a source-grounded explanation.`, flags: 64, allowed_mentions: { parse: [] } } });
+    if (name === "lesson") return json({ type: 4, data: { content: `📚 **Holistic Trader learning links**\nTopic requested: ${escapeText(opt(i.data, "topic") || "swing trading, supply and demand, weekly charts")}\n${LESSONS.join("\n")}\n\nThe bot does not have lesson-by-lesson indexing yet. Open the course or paste a lesson excerpt into `/ask-mentor` for a source-grounded explanation. Credited reference frameworks (no affiliation or endorsement claimed):\n${FRAMEWORKS.join("\n")}`, flags: 64, allowed_mentions: { parse: [] } } });
     if (name === "risk") return json({ type: 4, data: { content: riskCalc(i.data), flags: 0 } });
     if (name === "style") {
       const pick = opt(i.data, "coach");
