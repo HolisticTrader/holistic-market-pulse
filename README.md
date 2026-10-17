@@ -49,3 +49,17 @@ To remove one: post `Closed $USDJPY`. A newer call on the same ticker replaces t
 - Needs the secret `OFFTOPIC_WEBHOOK_URL`. Scoring and belt roles also need `DISCORD_BOT_TOKEN`, with the bot granted View Channels, Read Message History and **Manage Roles**.
 - Questions and quotes live in `trivia_bank.py`. Edit them anytime.
 - To relaunch the announcement, edit `launch.txt`.
+
+
+## Holistic Coach (separate Cloudflare Worker)
+The coach is configured separately from the scheduled market-pulse workflow. See [coach/README.md](coach/README.md) for setup and current commands.
+
+### Planned learning and trading tools
+These ideas are on the roadmap and are not available as commands yet:
+
+- **Weekly Fib Chart Coach** — swing-focused analysis of weekly Fibonacci levels, supply and demand (wholesale) zones, trend structure, scenarios, and invalidation. The exact Fib anchors and zone rules must follow the community’s approved course material. Intended markets: forex, crypto, and stocks.
+- **Evaluation Tracker** — `/challenge start` and `/challenge status` to track phase targets, trading days, daily loss, overall drawdown, personal rules, pass/fail, and payout milestones. Firm, program, phase, asset class, and swing-holding rules must be configurable; never assume all accounts at one firm share the same rules.
+- **Forex Battle Arena** — `/battle`, `/quiz`, and `/tournament` for historical or simulated chart quizzes, risk scenarios, head-to-head play, and tournaments. No live next-candle signals.
+- **24/7 Forex Mentor** — `/ask-mentor`, `/lesson`, and `/study-plan` for terminology, strategy questions, lesson-linked answers, study plans, flashcards, and quizzes using only approved community materials.
+
+Any AI-generated market commentary is educational, may be wrong, and is not a guaranteed entry or financial advice. Firm rules can change; verify the selected program’s current official terms before relying on a tracker warning.
