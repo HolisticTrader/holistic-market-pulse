@@ -36,7 +36,7 @@ def calendar(today):
 def ff_link(day):
     return f"https://www.forexfactory.com/calendar?day={day.strftime('%b').lower()}{day.day}.{day.year}"
 
-def headlines(ccy, q, n=2):
+def headlines(ccy, q, n=1):
     url = "https://news.google.com/rss/search?" + urllib.parse.urlencode({"q": f"({q}) when:1d", "hl": "en-US", "gl": "US", "ceid": "US:en"})
     try: xml = get(url)
     except Exception as e:
@@ -100,7 +100,7 @@ def build():
     news = []
     for c, q in NEWS_Q.items():
         h = headlines(c, q)
-        if h: news.append(f"**{c}**\n" + "\n".join(h))
+        if h: news.append(f"**{c}** " + "\n".join(h).lstrip("• "))
     embeds.append({"title": "📰 Currency headlines (last 24h)", "description": ("\n".join(news) or "No headlines pulled this morning.")[:4000]
                    + "\n-# Headlines via Google News. Open the link to read the original source.", "color": 0x3498DB})
 
@@ -133,6 +133,12 @@ def build():
     embeds.append({"title": "🚦 Rule check: events vs. open calls", "description": ("\n".join(warn) or "No high-impact events on currencies in our open calls today.")[:4000],
                    "color": 0xF1C40F, "footer": {"text": f"Generated {stamp}. Verify before trading. Education only, not financial advice."}})
 
+    # Discord caps all embeds in one message at 6000 chars: trim the longest sections until it fits
+    def total(): return sum(len(e.get("title", "")) + len(e.get("description", "")) + len(e.get("footer", {}).get("text", "")) for e in embeds)
+    while total() > 5800:
+        e = max(embeds, key=lambda x: len(x["description"]))
+        lines = e["description"].split("\n")
+        e["description"] = "\n".join(lines[:-2] + lines[-1:]) if len(lines) > 3 else e["description"][:len(e["description"]) - 300]
     return f"☀️ **Holistic Morning Brief · {now.strftime('%A %b %d')}**", embeds
 
 def main():
