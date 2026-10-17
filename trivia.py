@@ -155,7 +155,8 @@ def score_activity(s, tok):
     s["last_scan"] = datetime.datetime.now(datetime.timezone.utc).isoformat()
 
 BELT_COLORS = {"White": 0xFFFFFF, "Yellow": 0xF1C40F, "Orange": 0xE67E22, "Green": 0x2ECC71,
-               "Blue": 0x3498DB, "Purple": 0x9B59B6, "Brown": 0x8B5A2B, "Black": 0x111111}
+               "Blue": 0x3498DB, "Purple": 0x9B59B6, "Brown": 0x8B5A2B, "Black": 0x5D6166}
+SENSEI_ROLE = "🥋 Sensei"   # staff role: never given a belt, never touched by the sync
 
 def sync_belt_roles(s, tok):
     """Create belt roles if missing, then give each scored member exactly one belt role.
@@ -178,13 +179,14 @@ def sync_belt_roles(s, tok):
                 print("role create failed", rn, e); return
         ids[nm] = by_name[rn]
     belt_ids = set(ids.values())
+    sensei = by_name.get(SENSEI_ROLE)
     # every human member gets at least White Belt (new joiners included)
     try:
         members = req(f"https://discord.com/api/v10/guilds/{GUILD}/members?limit=1000", auth=auth)
         resolve_usernames(s, members)
         for m in members:
             u = m.get("user", {})
-            if u.get("bot") or set(m.get("roles", [])) & belt_ids: continue
+            if u.get("bot") or set(m.get("roles", [])) & (belt_ids | {sensei}): continue
             try: req(f"https://discord.com/api/v10/guilds/{GUILD}/members/{u['id']}/roles/{ids['White']}", method="PUT", auth=auth)
             except Exception as e: print("white belt failed", u.get("id"), e)
     except Exception as e:
@@ -197,6 +199,7 @@ def sync_belt_roles(s, tok):
         except Exception:
             continue
         have = set(mem.get("roles", []))
+        if sensei and sensei in have: continue
         for rid in (have & belt_ids) - {want}:
             try: req(f"https://discord.com/api/v10/guilds/{GUILD}/members/{uid}/roles/{rid}", method="DELETE", auth=auth)
             except Exception as e: print("remove role failed", uid, e)
