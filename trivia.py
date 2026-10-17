@@ -156,7 +156,7 @@ def score_activity(s, tok):
 
 BELT_COLORS = {"White": 0xFFFFFF, "Yellow": 0xF1C40F, "Orange": 0xE67E22, "Green": 0x2ECC71,
                "Blue": 0x3498DB, "Purple": 0x9B59B6, "Brown": 0x8B5A2B, "Black": 0x5D6166}
-SENSEI_ROLE = "🥋 Sensei"   # staff role: never given a belt, never touched by the sync
+# any role whose name ends in "Sensei" is staff: never given a belt, never touched by the sync
 
 def sync_belt_roles(s, tok):
     """Create belt roles if missing, then give each scored member exactly one belt role.
@@ -179,7 +179,7 @@ def sync_belt_roles(s, tok):
                 print("role create failed", rn, e); return
         ids[nm] = by_name[rn]
     belt_ids = set(ids.values())
-    sensei = by_name.get(SENSEI_ROLE)
+    sensei = next((rid for n, rid in by_name.items() if n.lower().endswith("sensei")), None)
     # every human member gets at least White Belt (new joiners included)
     try:
         members = req(f"https://discord.com/api/v10/guilds/{GUILD}/members?limit=1000", auth=auth)
