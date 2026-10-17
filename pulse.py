@@ -57,7 +57,9 @@ def quote(sym):
     """(price, 1-day % change) kept for call tracking and movers."""
     p, pts = history(sym)
     if p is None or len(pts) < 2: return p, 0.0 if p else None
-    prev = pts[-2][1] if pts[-1][0] == datetime.date.today() else pts[-1][1]
+    # The last daily bar is the current/most recent session if it's within ~36h; compare against the bar before it.
+    recent = (datetime.datetime.utcnow() - datetime.datetime.combine(pts[-1][0], datetime.time())).total_seconds() < 36 * 3600
+    prev = pts[-2][1] if recent else pts[-1][1]
     return p, (p / prev - 1) * 100
 
 def perf(sym):

@@ -51,6 +51,33 @@ def headlines(ccy, q, n=2):
         items.append(f"• [{title[:110]}]({link}) · {ts}")
     return items
 
+def trending():
+    """Social pulse: StockTwits trending tickers + r/Forex hot posts. Both optional, fail quietly."""
+    out = []
+    try:
+        d = json.loads(get("https://api.stocktwits.com/api/2/trending/symbols.json"))
+        syms = d.get("symbols", [])[:10]
+        if syms:
+            out.append("**StockTwits trending:** " + " · ".join(f"[${x['symbol']}](https://stocktwits.com/symbol/{x['symbol']})" for x in syms))
+    except Exception as e:
+        print("stocktwits failed", e)
+    try:
+        xml = get("https://www.reddit.com/r/Forex/hot/.rss?limit=6")
+        posts = []
+        for en in re.findall(r"<entry>(.*?)</entry>", xml, re.S):
+            title = html.unescape((re.search(r"<title>(.*?)</title>", en, re.S) or [None, ""])[1])
+            link = (re.search(r'<link href="(.*?)"', en) or [None, ""])[1]
+            upd = (re.search(r"<updated>(.*?)</updated>", en) or [None, ""])[1]
+            if not title or "Daily" in title or "Weekly" in title: continue
+            try: ts = datetime.datetime.fromisoformat(upd).astimezone(CT).strftime("%b %d %I:%M %p CT")
+            except Exception: ts = ""
+            posts.append(f"• [{title[:100]}]({link}) · {ts}")
+            if len(posts) == 3: break
+        if posts: out.append("**r/Forex hot:**\n" + "\n".join(posts))
+    except Exception as e:
+        print("reddit failed", e)
+    return out
+
 def build():
     now = datetime.datetime.now(CT); today = now.date()
     stamp = now.strftime("%a %b %d, %I:%M %p CT")
@@ -76,6 +103,11 @@ def build():
         if h: news.append(f"**{c}**\n" + "\n".join(h))
     embeds.append({"title": "📰 Currency headlines (last 24h)", "description": ("\n".join(news) or "No headlines pulled this morning.")[:4000]
                    + "\n-# Headlines via Google News. Open the link to read the original source.", "color": 0x3498DB})
+
+    hot = trending()
+    if hot:
+        embeds.append({"title": "🔥 What traders are talking about", "description": "\n\n".join(hot)[:4000]
+                       + "\n-# Social chatter isn't analysis. Use it to see what the crowd is watching, not what to trade.", "color": 0xE67E22})
 
     calls = pulse.all_calls()
     watch = []
