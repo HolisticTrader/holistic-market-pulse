@@ -56,6 +56,7 @@ CMDS = [
   "options": [{"name":"answer","description":"Submit your answer to the current round","type":STR,"required":False,"choices":[{"name":"A","value":"a"},{"name":"B","value":"b"},{"name":"C","value":"c"}]}]},
  {"name": "tournament", "description": "View your practice tournament score and standings."},
 ]
+CMDS.append(dict(CMDS[0], name="analyze-chart", description="Analyze a chart using weekly/monthly swing structure, supply/demand, and Fib confluence."))
 req = urllib.request.Request(f"https://discord.com/api/v10/applications/{os.environ['DISCORD_APP_ID']}/guilds/{GUILD}/commands",
     data=json.dumps(CMDS).encode(), method="PUT",
     headers={"Authorization": f"Bot {os.environ['DISCORD_BOT_TOKEN']}", "Content-Type": "application/json", "User-Agent": "HolisticCoach"})
