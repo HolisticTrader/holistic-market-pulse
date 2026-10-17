@@ -1,14 +1,15 @@
 // Holistic Coach: Discord slash-command AI for Holistic Traders.
 // Runs on Cloudflare Workers. Secrets (set in Cloudflare, never in code):
-//   DISCORD_PUBLIC_KEY, DISCORD_APP_ID, ANTHROPIC_API_KEY
-// Optional var: MODEL (default below), DAILY_LIMIT (per member, default 15)
+//   DISCORD_PUBLIC_KEY, DISCORD_APP_ID
+// Bind Cloudflare Workers AI as `AI`. Optional var: MODEL (default below),
+// DAILY_LIMIT (per member, default 15)
 //
 // Commands: /analyze /journal /risk /coach /style /ask-mentor /lesson
 //           /study-plan /challenge /quiz /battle /tournament
-// /risk is plain math (no AI). The others call Claude with a strict
+// /risk is plain math (no AI). The others call Workers AI with a strict
 // "educate, quantify risk, never predict" system prompt.
 
-const DEFAULT_MODEL = "claude-sonnet-5";
+const DEFAULT_MODEL = "@cf/meta/llama-4-scout-17b-16e-instruct";
 
 const SYSTEM = `You are Holistic Coach, the trading mentor bot for the Holistic Traders Discord.
 House method: swing trading supply and demand. Buy wholesale (demand), sell retail (supply). Every trade needs an entry zone, a target, and an invalidation level, judged on weekly closes. Small risk per trade (usually 0.5-2%), wide stops, patience. Many members are working prop-firm challenges, so daily-loss and max-drawdown rules matter. The course pages are links, not an indexed lesson library: never claim that a specific rule or Fib anchor came from a course unless the member supplies that lesson text.
@@ -194,34 +195,72 @@ function yahooSymbol(s) {
   return s;
 }
 
-async function marketSnapshot(sym) {
-  const y = yahooSymbol(sym);
-  const r = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(y)}?range=1y&interval=1wk`, { headers: { "user-agent": "Mozilla/5.0" } });
+function latestSwing(rows) {
+  // Mechanical fallback until the course's exact swing-anchor rules are indexed:
+  // confirmed two-bar pivots, choosing the latest pivot and preceding opposite pivot.
+  const pivots = [];
+  for (let i = 2; i < rows.length - 2; i++) {
+    const left = rows.slice(i - 2, i), right = rows.slice(i + 1, i + 3), x = rows[i];
+    if ([...left, ...right].every((r) => x.l < r.l) && [...left, ...right].every((r) => x.h < r.h)) pivots.push({ i, type: "low", price: x.l, d: x.d });
+    else if ([...left, ...right].every((r) => x.h > r.h) && [...left, ...right].every((r) => x.l > r.l)) pivots.push({ i, type: "high", price: x.h, d: x.d });
+  }
+  for (let j = pivots.length - 1; j > 0; j--) {
+    const end = pivots[j], start = [...pivots.slice(0, j)].reverse().find((p) => p.type !== end.type);
+    if (start && end.price !== start.price) return start.type === "low"
+      ? { direction: "bullish", start, end }
+      : { direction: "bearish", start, end };
+  }
+  return null;
+}
+
+async function timeframeData(y, range, interval, label) {
+  const r = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(y)}?range=${range}&interval=${interval}`, { headers: { "user-agent": "Mozilla/5.0" } });
   if (!r.ok) return null;
   const res = (await r.json())?.chart?.result?.[0];
   if (!res) return null;
   const q = res.indicators.quote[0];
-  const rows = res.timestamp.map((t, i) => ({ d: new Date(t * 1000).toISOString().slice(0, 10), h: q.high[i], l: q.low[i], c: q.close[i] })).filter((x) => x.c);
-  const p = res.meta.regularMarketPrice;
-  const pct = (n) => { const b = rows[Math.max(0, rows.length - 1 - n)]?.c; return b ? (((p / b) - 1) * 100).toFixed(1) + "%" : "n/a"; };
-  const hi = Math.max(...rows.map((x) => x.h)), lo = Math.min(...rows.map((x) => x.l));
-  const span = hi - lo;
-  const fib = [0, .236, .382, .5, .618, .786, 1].map((r) => `${(r * 100).toFixed(r === 0 || r === 1 ? 0 : 1)}% ${(hi - span * r).toPrecision(6)}`).join(" · ");
-  const rangeNote = `\nWeekly Fib reference (mechanical 52-week low ${lo.toPrecision(6)} to high ${hi.toPrecision(6)}; retracement from high): ${fib}. Midpoint ${((hi + lo) / 2).toPrecision(6)}. Approximate wholesale/discount area: 50-61.8% retracement; approximate retail/premium area: above the midpoint. The 52-week extremes are context, not verified course-selected swing anchors or confirmed supply/demand zones.`;
-  const last8 = rows.slice(-8).map((x) => `${x.d}: H ${x.h.toPrecision(6)} L ${x.l.toPrecision(6)} C ${x.c.toPrecision(6)}`).join("\n");
-  return `Symbol ${sym} (${y}). Price now ${p}. Change: 4w ${pct(4)}, 13w ${pct(13)}, 26w ${pct(26)}, 52w ${pct(52)}. 52-week high ${hi.toPrecision(6)}, low ${lo.toPrecision(6)}.${rangeNote}\nLast 8 weekly candles:\n${last8}\n(Data: Yahoo Finance, may be delayed.)`;
+  const rows = res.timestamp.map((t, i) => ({ d: new Date(t * 1000).toISOString().slice(0, 10), h: q.high[i], l: q.low[i], c: q.close[i] })).filter((x) => Number.isFinite(x.h) && Number.isFinite(x.l) && Number.isFinite(x.c));
+  return { rows, label, price: res.meta.regularMarketPrice };
 }
 
-// ---------- Claude ----------
-async function askClaude(env, userContent, style) {
-  const r = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: { "x-api-key": env.ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01", "content-type": "application/json" },
-    body: JSON.stringify({ model: env.MODEL || DEFAULT_MODEL, max_tokens: 900, system: SYSTEM + "\n\n" + STYLES[style].prompt, messages: [{ role: "user", content: userContent }] }),
+function fibSummary(frame) {
+  if (!frame?.rows?.length) return `${frame?.label || "Timeframe"}: unavailable.`;
+  const leg = latestSwing(frame.rows);
+  if (!leg) return `${frame.label}: no confirmed alternating swing pivots found.`;
+  const a = leg.start.price, b = leg.end.price, delta = b - a;
+  const levels = [0, .382, .618, 1, 1.618].map((ratio) => `${ratio}=${(a + delta * ratio).toPrecision(7)}`).join(" · ");
+  const z1 = a + delta * .382, z2 = a + delta * .618;
+  const low = Math.min(z1, z2), high = Math.max(z1, z2);
+  const side = leg.direction === "bullish" ? "potential demand/wholesale" : "potential supply/retail";
+  return `${frame.label} ${leg.direction} swing ${leg.start.d} ${a.toPrecision(7)} → ${leg.end.d} ${b.toPrecision(7)}; Fib levels (only 0, 0.382, 0.618, 1, 1.618): ${levels}. Candidate ${side} zone: ${low.toPrecision(7)}–${high.toPrecision(7)} (0.382–0.618 band). Anchor invalidation reference: 0=${a.toPrecision(7)}; 1.618 extension reference: ${(a + delta * 1.618).toPrecision(7)}.`;
+}
+
+async function marketSnapshot(sym) {
+  const y = yahooSymbol(sym);
+  const [weekly, monthly] = await Promise.all([timeframeData(y, "2y", "1wk", "Weekly"), timeframeData(y, "5y", "1mo", "Monthly")]);
+  if (!weekly && !monthly) return null;
+  const p = weekly?.price ?? monthly?.price;
+  const w = weekly?.rows || [], m = monthly?.rows || [];
+  const pct = (rows, n) => { const b = rows[Math.max(0, rows.length - 1 - n)]?.c; return b && p ? (((p / b) - 1) * 100).toFixed(1) + "%" : "n/a"; };
+  const last = w.slice(-8).map((x) => `${x.d}: H ${x.h.toPrecision(6)} L ${x.l.toPrecision(6)} C ${x.c.toPrecision(6)}`).join("\n");
+  return `Symbol ${sym} (${y}). Price now ${p}. Approx change: 4w ${pct(w, 4)}, 13w ${pct(w, 13)}, 26w ${pct(w, 26)}, 52w ${pct(w, 52)}.\n${fibSummary(weekly || { label: "Weekly" })}\n${fibSummary(monthly || { label: "Monthly" })}\nUse at most 1–2 zones: if weekly and monthly candidate bands overlap, describe one confluence zone; if they do not, describe each timeframe separately. The 0.382–0.618 band is a candidate zone only; it is not confirmation of supply/demand. Use only Fib ratios 0, 0.382, 0.618, 1 and 1.618; do not introduce other ratios.\nRecent weekly candles:\n${last || "Unavailable."}\n(Data: Yahoo Finance, may be delayed.)`;
+}
+
+// ---------- Cloudflare Workers AI ----------
+async function askModel(env, userContent, style) {
+  if (!env.AI) throw new Error("Cloudflare Workers AI binding `AI` is not configured.");
+  const content = userContent.map((part) => part.type === "image"
+    ? { type: "image_url", image_url: { url: part.source.url } }
+    : { type: "text", text: part.text });
+  const out = await env.AI.run(env.MODEL || DEFAULT_MODEL, {
+    messages: [
+      { role: "system", content: SYSTEM + "\n\n" + STYLES[style].prompt },
+      { role: "user", content },
+    ],
+    max_tokens: 900,
   });
-  if (!r.ok) throw new Error("AI error " + r.status);
-  const out = await r.json();
-  return out.content.filter((b) => b.type === "text").map((b) => b.text).join("\n").slice(0, 1950);
+  if (!out || typeof out.response !== "string") throw new Error("Workers AI returned no text response.");
+  return out.response.slice(0, 1950);
 }
 
 async function buildPrompt(name, data, resolved) {
@@ -230,7 +269,7 @@ async function buildPrompt(name, data, resolved) {
     const question = opt(data, "question") || "Walk me through the structure: where is wholesale, where is retail, and what would invalidate a long or a short?";
     const att = opt(data, "chart");
     const snap = sym ? await marketSnapshot(sym) : null;
-    const parts = [{ type: "text", text: `Member asks for a chart/setup breakdown of ${sym}.\nQuestion: ${question}\n\nMarket data:\n${snap || "No data available for this symbol."}\n\nGive: 1) the structure in plain words, 2) likely demand (wholesale) and supply (retail) areas based ONLY on this data, 3) bullish and bearish scenarios with what invalidates each, 4) the main uncertainty. No predictions.` }];
+    const parts = [{ type: "text", text: `Member asks for a chart/setup breakdown of ${sym}.\nQuestion: ${question}\n\nMarket data:\n${snap || "No data available for this symbol."}\n\nUse the weekly and monthly swing context above. Give only 1–2 Fib-derived candidate zones, use ONLY ratios 0, 0.382, 0.618, 1 and 1.618, and combine weekly/monthly bands as one zone only if they overlap. Label bullish-leg 0.382–0.618 as potential demand/wholesale and bearish-leg band as potential supply/retail. Name anchor 0/1 invalidation context and 1.618 extension reference. Do not call a band confirmed supply/demand without price reaction evidence. Then explain trend structure, bullish and bearish scenarios, what invalidates each, and the main uncertainty. No predictions.` }];
     const url = att && resolved?.attachments?.[att]?.url;
     if (url) parts.push({ type: "image", source: { type: "url", url } });
     return parts;
@@ -292,7 +331,7 @@ export default {
       try {
         const style = await getStyle(env, userId, opt(i.data, "style"));
         const prompt = await buildPrompt(name, i.data, i.data.resolved);
-        const answer = prompt ? await askClaude(env, prompt, style) : "Unknown command.";
+        const answer = prompt ? await askModel(env, prompt, style) : "Unknown command.";
         await followUp(env, i.token, `-# ${STYLES[style].label}\n${answer}`);
       } catch (e) {
         await followUp(env, i.token, "Coach hit a snag answering that. Try again in a minute.");
