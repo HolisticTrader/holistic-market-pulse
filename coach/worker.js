@@ -3,14 +3,15 @@
 //   DISCORD_PUBLIC_KEY, DISCORD_APP_ID, ANTHROPIC_API_KEY
 // Optional var: MODEL (default below), DAILY_LIMIT (per member, default 15)
 //
-// Commands: /analyze  /journal  /risk  /coach
+// Commands: /analyze /journal /risk /coach /style /ask-mentor /lesson
+//           /study-plan /challenge /quiz /battle /tournament
 // /risk is plain math (no AI). The others call Claude with a strict
 // "educate, quantify risk, never predict" system prompt.
 
 const DEFAULT_MODEL = "claude-sonnet-5-5";
 
 const SYSTEM = `You are Holistic Coach, the trading mentor bot for the Holistic Traders Discord.
-House method: swing trading supply and demand. Buy wholesale (demand), sell retail (supply). Every trade needs an entry zone, a target, and an invalidation level, judged on weekly closes. Small risk per trade (usually 0.5-2%), wide stops, patience. Many members are working prop-firm challenges, so daily-loss and max-drawdown rules matter.
+House method: swing trading supply and demand. Buy wholesale (demand), sell retail (supply). Every trade needs an entry zone, a target, and an invalidation level, judged on weekly closes. Small risk per trade (usually 0.5-2%), wide stops, patience. Many members are working prop-firm challenges, so daily-loss and max-drawdown rules matter. The course pages are links, not an indexed lesson library: never claim that a specific rule or Fib anchor came from a course unless the member supplies that lesson text.
 
 Rules you never break:
 - You do not predict where price will go and you never say a trade "will" work. Talk in scenarios: "if X holds... if Y breaks...".
@@ -28,6 +29,105 @@ const STYLES = {
   prop: { label: "🏦 The Prop Firm Coach", prompt: "Coaching style: THE PROP FIRM COACH. Lead with challenge rules: daily loss limit, max drawdown, consistency rules, minimum trading days, news restrictions, and weekend holding. Translate every idea into 'does this keep the account alive and passing?'. Rules differ by firm, so tell them to confirm with their firm's own rulebook." },
 };
 const DEFAULT_STYLE = "technical";
+
+const COURSE = {
+  udemy: "https://www.udemy.com/course/holistictraders/?referralcode=0facd4fc29218d594d31",
+  ebook: "https://holistictrader.gumroad.com/l/holistictraders",
+  substack: "https://immaculatetonyeth.substack.com/",
+};
+
+const QUIZZES = [
+  { q: "A trader risks 1% of a $10,000 account on one idea. What is the planned loss at the stop?", a: "b", choices: "A) $10   B) $100   C) $1,000", explain: "$10,000 × 1% = $100." },
+  { q: "Price closes below the weekly swing low used to frame a bullish setup. What is the disciplined next step?", a: "c", choices: "A) Add to the position   B) Move the stop lower   C) Reassess or invalidate the idea", explain: "A weekly close through the chosen invalidation level means the original thesis needs reassessment." },
+  { q: "Which is the safest basis for a chart quiz in this arena?", a: "a", choices: "A) Historical or simulated data   B) Guessing the next live candle   C) Copying another member's live entry", explain: "The arena is for education on historical or simulated examples, never live next-candle betting." },
+  { q: "A prop account has a daily loss limit. What belongs in the plan before a trade?", a: "b", choices: "A) Only the profit target   B) The trade risk plus existing daily loss and exposure   C) The largest available lot size", explain: "The remaining daily loss buffer includes realized losses and open risk under that firm's rules." },
+];
+
+const LESSONS = [
+  "📘 [Holistic Trader's Blueprint ebook](" + COURSE.ebook + ")",
+  "🎓 [Holistic Trading Plan course on Udemy](" + COURSE.udemy + ")",
+  "📰 [Holistic Trader Newsletter / Substack](" + COURSE.substack + ")",
+];
+
+const sub = (data) => (data.options || []).find((x) => x.type === 1);
+const subOpt = (data, name) => (sub(data)?.options || []).find((x) => x.name === name)?.value;
+const escapeText = (s) => String(s ?? "").replace(/[<>]/g, "");
+
+async function getRecord(env, key) {
+  if (!env.LIMITS) return null;
+  try { return await env.LIMITS.get(key, "json"); } catch { return null; }
+}
+async function putRecord(env, key, value, ttl = 15552000) {
+  if (!env.LIMITS) return false;
+  await env.LIMITS.put(key, JSON.stringify(value), { expirationTtl: ttl });
+  return true;
+}
+
+function challengeText(c, current, todayPnl) {
+  const equity = Number(current);
+  if (!(equity > 0)) return "Enter a positive current balance/equity to see your progress.";
+  const start = Number(c.start_balance), size = Number(c.account_size || c.start_balance);
+  const target = start * Number(c.target_pct) / 100;
+  const dailyLimit = size * Number(c.daily_loss_pct) / 100;
+  const overallLimit = size * Number(c.max_loss_pct) / 100;
+  const todayLoss = Math.max(0, -Number(todayPnl || 0));
+  const remaining = Math.max(0, dailyLimit - todayLoss);
+  const profit = equity - start;
+  const passed = profit >= target && Number(c.days_done || 0) >= Number(c.min_days || 0);
+  const phase = escapeText(c.phase || "Phase 1");
+  return `🏦 **${escapeText(c.firm)} · ${escapeText(c.program)} · ${phase}**\n` +
+    `Progress: ${profit >= 0 ? "+" : ""}$${profit.toFixed(2)} / $${target.toFixed(2)} target (${Number(c.target_pct)}%). ${passed ? "✅ Target and configured day count reached." : "Target/day requirements not yet met."}\n` +
+    `Current balance: $${equity.toFixed(2)} · Daily loss room: $${remaining.toFixed(2)} of $${dailyLimit.toFixed(2)} · Max loss: $${overallLimit.toFixed(2)} from the configured starting balance.\n` +
+    `Trading days: ${Number(c.days_done || 0)} / ${Number(c.min_days || 0)} · Markets: ${escapeText(c.markets || "confirm for program")} · Swing holding: ${c.swing ? "selected as allowed" : "not confirmed"}\n` +
+    `Rules: ${c.rules_url ? `<${c.rules_url}>` : "use your program's current official rule page"}. Values are member-entered tracking settings. Confirm equity, reset times, drawdown method, and all rules with the firm before trading.`;
+}
+
+async function handleChallenge(env, data, userId) {
+  const action = sub(data)?.name;
+  const key = `challenge:${userId}`;
+  if (action === "start") {
+    const c = {
+      firm: subOpt(data, "firm"), program: subOpt(data, "program"), phase: subOpt(data, "phase"),
+      account_size: subOpt(data, "account_size"), start_balance: subOpt(data, "start_balance"),
+      target_pct: subOpt(data, "target_pct"), daily_loss_pct: subOpt(data, "daily_loss_pct"),
+      max_loss_pct: subOpt(data, "max_loss_pct"), min_days: subOpt(data, "min_days"),
+      days_done: subOpt(data, "days_done"), markets: subOpt(data, "markets"),
+      swing: subOpt(data, "swing"), rules_url: subOpt(data, "rules_url"), updated_at: new Date().toISOString(),
+    };
+    if (!await putRecord(env, key, c)) return "Challenge tracking needs the Cloudflare KV binding named `LIMITS`. Ask an admin to finish the setup before starting.";
+    return `✅ Challenge tracker started. Set every field from your exact account dashboard/rulebook; programs change.\n${challengeText(c, c.start_balance, 0)}\n\nOfficial rule references: [FTMO objectives](https://ftmo.com/en/trading-objectives/) · [FTMO Swing](https://ftmo.com/en/faq/ftmo-swing-account-type/) · [The5ers High Stakes](https://the5ers.com/high-stakes/)`;
+  }
+  if (action === "status") {
+    const c = await getRecord(env, key);
+    if (!c) return "No saved challenge yet. Use `/challenge start` and enter the exact program rules and baseline.";
+    return challengeText(c, subOpt(data, "current_balance"), subOpt(data, "today_pnl"));
+  }
+  return "Use `/challenge start` to configure a tracker or `/challenge status` to update your balance and today's P&L.";
+}
+
+async function handleQuiz(env, data, userId, command) {
+  if (!env.LIMITS) return "The learning game needs the Cloudflare KV binding named `LIMITS` for questions and scores. Ask an admin to finish setup.";
+  if (command === "tournament") {
+    const score = Number((await env.LIMITS.get(`score:${userId}`)) || 0);
+    return `🏆 **Weekly practice standings**\nYour completed quiz points: **${score}**. Tournaments are practice-only; there are no live-market predictions or financial prizes configured. Members can use `/quiz` for the next historical/simulated question.`;
+  }
+  const answer = String(opt(data, "answer") || "").trim().toLowerCase();
+  const pendingKey = `quiz:${userId}`;
+  if (answer) {
+    const p = await getRecord(env, pendingKey);
+    if (!p) return "Start a fresh historical/simulated question with `/quiz` or `/battle` first.";
+    await env.LIMITS.delete(pendingKey);
+    const correct = answer === p.answer;
+    if (correct) {
+      const key = `score:${userId}`;
+      await env.LIMITS.put(key, String(Number((await env.LIMITS.get(key)) || 0) + 1));
+    }
+    return `${correct ? "✅ Correct" : "❌ Not quite"}. ${p.explain}\n${command === "battle" ? "Practice point: " + (correct ? "1" : "0") + ". " : ""}Education only; this question uses a simulated example, not live prices.`;
+  }
+  const q = QUIZZES[Math.floor(Math.random() * QUIZZES.length)];
+  await putRecord(env, pendingKey, { answer: q.a, explain: q.explain }, 600);
+  return `${command === "battle" ? "⚔️ **Battle Arena · simulated round**" : "🧠 **Practice quiz · historical/simulated**"}\n${q.q}\n${q.choices}\nReply with `/quiz answer:a` (or b/c) to check. This is a learning game, not a live-market call.`;
+}
 
 async function getStyle(env, userId, override) {
   if (override && STYLES[override]) return override;
@@ -105,8 +205,11 @@ async function marketSnapshot(sym) {
   const p = res.meta.regularMarketPrice;
   const pct = (n) => { const b = rows[Math.max(0, rows.length - 1 - n)]?.c; return b ? (((p / b) - 1) * 100).toFixed(1) + "%" : "n/a"; };
   const hi = Math.max(...rows.map((x) => x.h)), lo = Math.min(...rows.map((x) => x.l));
+  const span = hi - lo;
+  const fib = [0, .236, .382, .5, .618, .786, 1].map((r) => `${(r * 100).toFixed(r === 0 || r === 1 ? 0 : 1)}% ${(hi - span * r).toPrecision(6)}`).join(" · ");
+  const rangeNote = `\nWeekly Fib reference (mechanical 52-week low ${lo.toPrecision(6)} to high ${hi.toPrecision(6)}; retracement from high): ${fib}. Midpoint ${((hi + lo) / 2).toPrecision(6)}. Approximate wholesale/discount area: 50-61.8% retracement; approximate retail/premium area: above the midpoint. The 52-week extremes are context, not verified course-selected swing anchors or confirmed supply/demand zones.`;
   const last8 = rows.slice(-8).map((x) => `${x.d}: H ${x.h.toPrecision(6)} L ${x.l.toPrecision(6)} C ${x.c.toPrecision(6)}`).join("\n");
-  return `Symbol ${sym} (${y}). Price now ${p}. Change: 4w ${pct(4)}, 13w ${pct(13)}, 26w ${pct(26)}, 52w ${pct(52)}. 52-week high ${hi.toPrecision(6)}, low ${lo.toPrecision(6)}.\nLast 8 weekly candles:\n${last8}\n(Data: Yahoo Finance, may be delayed.)`;
+  return `Symbol ${sym} (${y}). Price now ${p}. Change: 4w ${pct(4)}, 13w ${pct(13)}, 26w ${pct(26)}, 52w ${pct(52)}. 52-week high ${hi.toPrecision(6)}, low ${lo.toPrecision(6)}.${rangeNote}\nLast 8 weekly candles:\n${last8}\n(Data: Yahoo Finance, may be delayed.)`;
 }
 
 // ---------- Claude ----------
@@ -134,6 +237,12 @@ async function buildPrompt(name, data, resolved) {
   }
   if (name === "journal") return [{ type: "text", text: `Review this trade like a coach. Identify process mistakes (entry, stop placement, sizing, management, emotions) and what was done well. Be specific and kind. Trade:\n${opt(data, "trade")}` }];
   if (name === "coach") return [{ type: "text", text: `Give feedback on these trading rules. What's clear, what's vague, what's missing (entry, target, invalidation, size, daily loss limit, when to stop trading), and one concrete improvement. Rules:\n${opt(data, "rules")}` }];
+  if (name === "ask-mentor") {
+    const excerpt = opt(data, "lesson_excerpt");
+    if (!excerpt) return [{ type: "text", text: `The course links are available, but their lesson content is not indexed in this bot yet. I won't guess what the course says. Paste the relevant passage into the optional lesson_excerpt field and ask again.\n\n${LESSONS.join("\n")}` }];
+    return [{ type: "text", text: `Answer only from the member-supplied approved lesson excerpt below. If it does not answer the question, say so and give the relevant course link. Do not add unsourced trading rules. Explain it simply and cite the excerpt topic if given.\nQuestion: ${opt(data, "question")}\nLesson excerpt: ${excerpt}\n\nCourse links:\n${LESSONS.join("\n")}` }];
+  }
+  if (name === "study-plan") return [{ type: "text", text: `Build a practical 7-day swing-trading study plan for these goals: ${opt(data, "goals")}. Link each day to one of the approved resources below. Do not invent specific lesson titles, page numbers, or claim the materials were reviewed. Cover weekly structure, supply/demand, Fib practice with disclosed anchors, risk, journaling, and review. Include a short task each day.\n${LESSONS.join("\n")}` }];
   return null;
 }
 
@@ -165,6 +274,9 @@ export default {
 
     const name = i.data.name;
     const userId = i.member?.user?.id || i.user?.id;
+    if (["challenge"].includes(name)) return json({ type: 4, data: { content: await handleChallenge(env, i.data, userId), flags: 64, allowed_mentions: { parse: [] } } });
+    if (["quiz", "battle", "tournament"].includes(name)) return json({ type: 4, data: { content: await handleQuiz(env, i.data, userId, name), flags: name === "quiz" ? 64 : 0, allowed_mentions: { parse: [] } } });
+    if (name === "lesson") return json({ type: 4, data: { content: `📚 **Holistic Trader learning links**\nTopic requested: ${escapeText(opt(i.data, "topic") || "swing trading, supply and demand, weekly charts")}\n${LESSONS.join("\n")}\n\nThe bot does not have lesson-by-lesson indexing yet. Open the course or paste a lesson excerpt into `/ask-mentor` for a source-grounded explanation.`, flags: 64, allowed_mentions: { parse: [] } } });
     if (name === "risk") return json({ type: 4, data: { content: riskCalc(i.data), flags: 0 } });
     if (name === "style") {
       const pick = opt(i.data, "coach");
