@@ -227,11 +227,11 @@ def now_ct():
         return datetime.datetime.utcnow().strftime("%a %b %d, %H:%M UTC")
 
 QUESTIONS = [
-    "{a} is the biggest mover this week ({ac:+.2f}%). Chasing it, fading it, or sitting on hands?",
-    "Biggest weekly move on the board: {a} {ac:+.2f}%. Real flow or noise? Drop your read 👇",
-    "{a} {ac:+.2f}% and {b} {bc:+.2f}%. Same story or two different ones?",
-    "Which call on our list are you watching closest this session, and why?",
-    "Weekly close is what matters. Which pair do you think closes the week strongest?",
+    "On the weekly chart, does {a}'s {ac:+.2f}% move align with its monthly structure? What would invalidate your swing view?",
+    "Is {a}'s {ac:+.2f}% weekly move meaningful against its 30D/90D trend, or just short-term volatility? What evidence supports your swing read?",
+    "Compare {a} ({ac:+.2f}% this week) with {b} ({bc:+.2f}%): how do their weekly/monthly structures differ, and what would change your view?",
+    "Which open idea has the clearest weekly/monthly structure and defined invalidation? What would make you stand aside?",
+    "Which pair's weekly structure is strongest relative to its monthly trend, and what evidence would confirm or invalidate that assessment?",
 ]
 
 def build(kind):
@@ -251,7 +251,7 @@ def build(kind):
         content = head + "\n💬 **Your read:** " + random.choice([
             "{a} is {ac:+.2f}% on the week. Real flow or thin-liquidity noise?",
             "Weekend crypto: {a} {ac:+.2f}% this week. Are you trading it or waiting for Monday?",
-            "Where does {a} close Sunday night? Drop your level 👇"]).format(a=a, ac=ac)
+            "Does {a}'s weekly move align with the monthly trend, or is it countertrend? What weekly evidence would confirm or invalidate a swing thesis?"]).format(a=a, ac=ac)
         embeds[-1]["footer"] = {"text": "30D · 90D · 6M · 1Y · YTD % change. Data: Yahoo Finance. Not financial advice."}
         return content, embeds
     content = head
