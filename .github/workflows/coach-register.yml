@@ -1,0 +1,20 @@
+name: Register Coach Commands
+on:
+  push:
+    paths: ["coach/register.txt", "coach/register_commands.py"]
+  workflow_dispatch:
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Register
+        env:
+          DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
+          DISCORD_APP_ID: ${{ vars.DISCORD_APP_ID }}
+        run: |
+          if [ -z "$DISCORD_BOT_TOKEN" ] || [ -z "$DISCORD_APP_ID" ]; then echo "Bot token or app id not set yet, skipping"; exit 0; fi
+          python coach/register_commands.py
