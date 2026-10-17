@@ -54,13 +54,16 @@ def history(sym):
     return None, []
 
 def quote(sym):
-    """(price, 1-day % change) kept for call tracking and movers."""
+    """(price, 1-WEEK % change): vs the last close at least 7 days ago."""
     p, pts = history(sym)
     if p is None or len(pts) < 2: return p, 0.0 if p else None
-    # The last daily bar is the current/most recent session if it's within ~36h; compare against the bar before it.
-    recent = (datetime.datetime.utcnow() - datetime.datetime.combine(pts[-1][0], datetime.time())).total_seconds() < 36 * 3600
-    prev = pts[-2][1] if recent else pts[-1][1]
-    return p, (p / prev - 1) * 100
+    cutoff = datetime.date.today() - datetime.timedelta(days=7)
+    base = None
+    for d, c in pts:
+        if d <= cutoff: base = c
+        else: break
+    base = base or pts[0][1]
+    return p, (p / base - 1) * 100
 
 def perf(sym):
     """% change over each period in PERIODS, using the last close on/before the start date."""
@@ -224,8 +227,8 @@ def now_ct():
         return datetime.datetime.utcnow().strftime("%a %b %d, %H:%M UTC")
 
 QUESTIONS = [
-    "{a} is the biggest mover today ({ac:+.2f}%). Chasing it, fading it, or sitting on hands?",
-    "Biggest move on the board: {a} {ac:+.2f}%. Real flow or noise? Drop your read 👇",
+    "{a} is the biggest mover this week ({ac:+.2f}%). Chasing it, fading it, or sitting on hands?",
+    "Biggest weekly move on the board: {a} {ac:+.2f}%. Real flow or noise? Drop your read 👇",
     "{a} {ac:+.2f}% and {b} {bc:+.2f}%. Same story or two different ones?",
     "Which call on our list are you watching closest this session, and why?",
     "Weekly close is what matters. Which pair do you think closes the week strongest?",
@@ -246,8 +249,8 @@ def build(kind):
         m = movers(CRYPTO)
         a, ac = m[0] if m else ("BTC", 0.0)
         content = head + "\n💬 **Your read:** " + random.choice([
-            "{a} leads the weekend move ({ac:+.2f}%). Real flow or thin-liquidity noise?",
-            "Weekend crypto: {a} {ac:+.2f}%. Are you trading it or waiting for Monday?",
+            "{a} is {ac:+.2f}% on the week. Real flow or thin-liquidity noise?",
+            "Weekend crypto: {a} {ac:+.2f}% this week. Are you trading it or waiting for Monday?",
             "Where does {a} close Sunday night? Drop your level 👇"]).format(a=a, ac=ac)
         embeds[-1]["footer"] = {"text": "30D · 90D · 6M · 1Y · YTD % change. Data: Yahoo Finance. Not financial advice."}
         return content, embeds
