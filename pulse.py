@@ -203,17 +203,23 @@ def all_calls():
     return list(calls.values())
 
 def calls_block():
-    lines = []
+    rows = []
     for name, sym, side, tgt, inv in all_calls()[-12:]:  # newest 12 to stay under Discord's 2000-char limit
         p, _ = quote(sym)
         if p is None:
             continue
+        room = (p - inv) / p * 100 * (1 if side == "long" else -1) if inv is not None else None
+        rows.append((name, sym, side, tgt, inv, p, room))
+
+    rows.sort(key=lambda row: row[6] if row[6] is not None else float("inf"))
+
+    lines = []
+    for name, sym, side, tgt, inv, p, room in rows:
         bits = [f"{name} {side} @ {p:.4g}"]
         if tgt is not None:
             dist = (tgt - p) / p * 100 * (1 if side == "long" else -1)
             bits.append("T1 hit ✅" if dist <= 0 else f"{dist:.1f}% to T1 ({tgt:g})")
         if inv is not None:
-            room = (p - inv) / p * 100 * (1 if side == "long" else -1)
             bits.append("INVALIDATED ❌" if room <= 0 else f"{room:.1f}% from stop ({inv:g})")
         lines.append("• " + " | ".join(bits))
     return "\n".join(lines)
