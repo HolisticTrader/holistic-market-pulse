@@ -20,17 +20,19 @@ STOCKS = [("^GSPC","S&P 500",1),("^IXIC","Nasdaq",1),("^DJI","Dow",0),("^VIX","V
 
 # Tony's open calls. Edit this list when calls change. None = not published.
 CALLS = [
-  # name, symbol, direction, target, invalidation
-  ("GBP/JPY","GBPJPY=X","short",184.40,220.32),
-  ("AUD/JPY","AUDJPY=X","short",110.0,113.0),  # T1 zone 100-110; T2 88-95
-  ("CHF/JPY","CHFJPY=X","long",204.0,None),
-  ("USD/MXN","USDMXN=X","long",18.80,17.50),
-  ("USD/NOK","USDNOK=X","long",10.62,9.07),
-  ("AUD/USD","AUDUSD=X","short",None,0.7421),
-  ("GBP/AUD","GBPAUD=X","long",2.046,1.852),
-  ("EUR/CHF","EURCHF=X","short",None,0.9445),
-  ("NZD/JPY","NZDJPY=X","long",94.99,86.50),
-  ("USD/ZAR","USDZAR=X","long",17.00,15.65),
+  # name, symbol, direction, target areas, invalidation
+  # Target areas: a list, T1 first. Each is a zone (low, high) or a single level.
+  # Long -> target is the RETAIL area. Short -> target is the WHOLESALE area.
+  ("GBP/JPY","GBPJPY=X","short",[184.40],220.32),
+  ("AUD/JPY","AUDJPY=X","short",[(100.0,110.0),(88.0,95.0)],113.0),
+  ("CHF/JPY","CHFJPY=X","long",[204.0],None),
+  ("USD/MXN","USDMXN=X","long",[18.80,21.00],17.50),
+  ("USD/NOK","USDNOK=X","long",[10.62],9.07),
+  ("AUD/USD","AUDUSD=X","short",[],0.7421),
+  ("GBP/AUD","GBPAUD=X","long",[2.046],1.852),
+  ("EUR/CHF","EURCHF=X","short",[],0.9445),
+  ("NZD/JPY","NZDJPY=X","long",[94.99],86.50),
+  ("USD/ZAR","USDZAR=X","long",[(17.00,17.80)],15.65),
 ]
 
 UA = {"User-Agent": "Mozilla/5.0 (HolisticMarketPulse)"}
@@ -144,12 +146,16 @@ def parse_calls(text):
         if not m: continue
         chunk = chunk[:600]
         d = re.search(r"(?i)\b(long|short|buy|sell|bullish|bearish)\b", chunk)
-        tg = re.search(r"(?i)\b(?:target|tp|t1)\b[^\n]{0,30}?(?<![A-Za-z\d.,])" + NUM, chunk)
+        tg = re.search(r"(?i)\b(?:target|tp|t1)\b[^\n]{0,30}?(?<![A-Za-z\d.,])" + NUM + r"(?:\s*(?:-|–|—|to)\s*" + NUM + ")?", chunk)
         iv = re.search(r"(?i)\b(?:invalid(?:ation)?|stop(?:\s*loss)?|sl|wrong)\b[^\n]{0,40}?(?<![A-Za-z\d.,])" + NUM, chunk)
         if not d or not (tg or iv): continue
         side = "long" if d.group(1).lower() in ("long", "buy", "bullish") else "short"
         sym, name = yahoo_symbol(m.group(1))
-        out.append(("open", (name, sym, side, _f(tg.group(1)) if tg else None, _f(iv.group(1)) if iv else None)))
+        tgt = []
+        if tg:
+            a = _f(tg.group(1)); b = _f(tg.group(2)) if tg.group(2) else None
+            tgt = [(min(a, b), max(a, b)) if b else a]
+        out.append(("open", (name, sym, side, tgt, _f(iv.group(1)) if iv else None)))
     return out
 
 def _get(url, headers=None):
@@ -202,52 +208,67 @@ def all_calls():
                 calls[val[1]] = val
     return list(calls.values())
 
+def _zone(t):
+    """(low, high, label) for a target area or a single level."""
+    if isinstance(t, (tuple, list)):
+        lo, hi = min(t), max(t)
+        return lo, hi, f"{_px(lo)}–{_px(hi)}"
+    return t, t, _px(t)
+
+def _target_status(side, p, t):
+    """Returns (reached, text) for one target area."""
+    lo, hi, label = _zone(t)
+    if lo <= p <= hi and lo != hi:
+        return True, f"{label} · price is **inside the area** ✅"
+    if (side == "long" and p >= hi) or (side == "short" and p <= lo):
+        return True, f"{label} · **reached** ✅"
+    near = lo if side == "long" else hi  # the edge price reaches first
+    return False, f"{label} · {abs(near - p) / p * 100:.1f}% to the area"
+
 def calls_block():
     rows = []
-    for name, sym, side, tgt, inv in all_calls()[-12:]:  # newest 12 to stay under Discord's 2000-char limit
+    for name, sym, side, tgts, inv in all_calls()[-12:]:  # newest 12 to stay under Discord's limits
         p, _ = quote(sym)
         if p is None:
             continue
+        if tgts is None: tgts = []
+        elif not isinstance(tgts, list): tgts = [tgts]
         room = (p - inv) / p * 100 * (1 if side == "long" else -1) if inv is not None else None
-        rows.append((name, sym, side, tgt, inv, p, room))
-
-    rows.sort(key=lambda row: row[6] if row[6] is not None else float("inf"))
+        rows.append((name, side, tgts, inv, p, room))
+    rows.sort(key=lambda r: r[5] if r[5] is not None else float("inf"))
     if not rows:
         return ""
 
-    # Group each call by status so the reader sees what matters first.
     NEAR = 3.0  # % from stop that counts as "close to stop"
     groups = {"stop": [], "near": [], "hit": [], "run": []}
-    for name, sym, side, tgt, inv, p, room in rows:
-        dist = (tgt - p) / p * 100 * (1 if side == "long" else -1) if tgt is not None else None
+    for name, side, tgts, inv, p, room in rows:
         arrow = "📈 Long" if side == "long" else "📉 Short"
-        head = f"**{name}** · {arrow} · price now **{_px(p)}**"
-        if tgt is None:
-            t_line = "🎯 Target: not posted yet"
-        elif dist <= 0:
-            t_line = f"🎯 Target {tgt:g}: **reached** ✅"
-        else:
-            t_line = f"🎯 Target {tgt:g}: {dist:.1f}% to go"
+        area = "Retail" if side == "long" else "Wholesale"
+        lines = [f"**{name}** · {arrow} · price now **{_px(p)}**"]
+        t1_hit = False
+        if not tgts:
+            lines.append(f"🎯 {area} area (target): not posted yet")
+        for i, t in enumerate(tgts):
+            hit, txt = _target_status(side, p, t)
+            if i == 0: t1_hit = hit
+            tag = f"T{i+1} " if len(tgts) > 1 else ""
+            lines.append(f"🎯 {tag}{area} area: {txt}")
         if inv is None:
-            s_line = "🛑 Stop: not posted yet"
+            lines.append("🛑 Stop: not posted yet")
         elif room <= 0:
-            s_line = f"🛑 Stop {inv:g}: **hit** ❌ call closed"
+            lines.append(f"🛑 Stop {_px(inv)}: **hit** ❌ call closed")
         else:
-            s_line = f"🛑 Stop {inv:g}: {room:.1f}% away"
-        entry = f"{head}\n{t_line}\n{s_line}"
-        if room is not None and room <= 0:
-            groups["stop"].append(entry)
-        elif dist is not None and dist <= 0:
-            groups["hit"].append(entry)
-        elif room is not None and room < NEAR:
-            groups["near"].append(entry)
-        else:
-            groups["run"].append(entry)
+            lines.append(f"🛑 Stop {_px(inv)}: {room:.1f}% away")
+        entry = "\n".join(lines)
+        if room is not None and room <= 0: groups["stop"].append(entry)
+        elif t1_hit: groups["hit"].append(entry)
+        elif room is not None and room < NEAR: groups["near"].append(entry)
+        else: groups["run"].append(entry)
 
-    out = ["*How to read it: 🎯 = how far price is from the target. "
-           "🛑 = how far price is from the stop. Smaller stop % = more danger.*"]
+    out = ["*How to read it: 🎯 = how far price is from the target area "
+           "(Retail area on longs, Wholesale area on shorts). 🛑 = how far price is from the stop.*"]
     for key, title in (("stop", "❌ STOPPED OUT"), ("near", f"⚠️ CLOSE TO STOP (under {NEAR:g}%)"),
-                       ("hit", "✅ TARGET REACHED"), ("run", "▶️ IN PROGRESS")):
+                       ("hit", "✅ IN OR PAST THE TARGET AREA"), ("run", "▶️ IN PROGRESS")):
         if groups[key]:
             out.append(f"\n__{title}__")
             out.append("\n\n".join(groups[key]))
