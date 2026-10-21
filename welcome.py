@@ -61,7 +61,7 @@ Quick rundown so you're not lost:
 • **We're built around prop trading.** Trade a firm's capital, cap your risk at the challenge fee, get paid on consistency. Small risk, wide stops, patience.
 • **Trade alerts** with entry, target and invalidation live in #trade-alert.
 • **The live market board** is pinned in #general and updates every 15 minutes.
-• **Trivia rounds every 2 hours** earn you points and belts (⚪ White to ⚫ Black).
+• **A daily trivia question at 12 PM CT** earns you points and belts (⚪ White to ⚫ Black).
 • **Full breakdowns + graded calls:** {SUBSTACK}
 
 Do me one favor: introduce yourself in #general. What you trade and where you're at with prop firms. And ask me anything, seriously. No question is a dumb one."""

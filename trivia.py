@@ -3,7 +3,7 @@
   python trivia.py round        reveal last answer, maybe a quote, post a new 2-hour poll
   python trivia.py leaderboard  score polls + server activity, post standings and belt promotions
   python trivia.py announce     launch announcement (@everyone in #general) + first round
-Env: OFFTOPIC_WEBHOOK_URL (required), DISCORD_WEBHOOK_URL (#general, for announce),
+Env: DISCORD_WEBHOOK_URL (#general: trivia, Dojo standings, Hall of Fame all post here),
      DISCORD_BOT_TOKEN (optional: scoring + activity points), GUILD_ID
 State: state/trivia.json (committed back by the workflow)."""
 import json, os, sys, random, datetime, urllib.request, urllib.error
@@ -13,7 +13,7 @@ STATE = "state/trivia.json"
 GUILD = os.environ.get("GUILD_ID", "1342649158187749457")
 UA = {"User-Agent": "Mozilla/5.0 (HolisticTrivia)", "Content-Type": "application/json"}
 L = "ABCD"
-POLL_HOURS = 2
+POLL_HOURS = 8   # one question a day: posts 12 PM CT, closes 8 PM, answer + standings 9:30 PM
 PTS_CORRECT, PTS_VOTE, PTS_MSG, MSG_CAP, STREAK_BONUS = 3, 1, 1, 5, 2
 BELTS = [(0, "⚪", "White"), (10, "🟡", "Yellow"), (25, "🟠", "Orange"), (50, "🟢", "Green"),
          (100, "🔵", "Blue"), (175, "🟣", "Purple"), (275, "🟤", "Brown"), (400, "⚫", "Black")]
@@ -210,7 +210,7 @@ def sync_belt_roles(s, tok):
 def reveal_last(hook, s):
     if s.get("last") is None: return
     q, o, a, why = QUESTIONS[s["last"]]
-    say(hook, f"✅ **Tonight's last answer:** {q}\n**{L[a]}. {o[a]}**\n> {why}\n\nNew rounds start 8 AM CT. 🥋")
+    say(hook, f"✅ **Tonight's last answer:** {q}\n**{L[a]}. {o[a]}**\n> {why}\n\nNext question tomorrow at 12 PM CT. 🥋")
     s["last"] = None
 
 def leaderboard(hook, s):
@@ -223,7 +223,7 @@ def leaderboard(hook, s):
         score_polls(s, tok); score_activity(s, tok); sync_belt_roles(s, tok)
     promos = [u for u, p in s["total"].items() if belt(p)[2] != before.get(u, "White") and p >= BELTS[1][0]]
     if not s["week_pts"]:
-        txt = "🥋 **Holistic Traders Dojo: daily wrap**\nBoard's empty. First points of the week are up for grabs. Rounds start 8 AM CT in #off-topic."
+        txt = "🥋 **Holistic Traders Dojo: daily wrap**\nBoard's empty. First points of the week are up for grabs. Today's question drops at 12 PM CT right here in #general."
         if not tok: txt += "\n-# Scoring switches on once the server bot is connected."
         say(hook, txt); return
     top = sorted(s["week_pts"].items(), key=lambda x: -x[1])[:10]
@@ -274,11 +274,11 @@ def announce(hook, s):
     general = clean_hook(os.environ["DISCORD_WEBHOOK_URL"]) if os.environ.get("DISCORD_WEBHOOK_URL") else ""
     try: ch = req(hook).get("channel_id")
     except Exception: ch = None
-    where = f"<#{ch}>" if ch else "#off-topic"
+    where = f"<#{ch}>" if ch else "#general"
     txt = (f"@everyone 🥋 **The Holistic Traders Dojo is open.**\n\n"
-           f"Starting today, {where} runs **Holistic Trivia** all day: technical analysis, market history and forex questions, "
+           f"Starting today, {where} runs **Holistic Trivia** once a day: technical analysis, market history and forex questions, "
            f"plus quotes from the legends who built this game.\n\n"
-           f"⏰ **New round every 2 hours, 8 AM to 8 PM CT, every day.** You get {POLL_HOURS} hours to vote. The answer drops with the next round.\n"
+           f"⏰ **One question a day at 12 PM CT.** Voting closes at 8 PM. The answer drops at 9:30 PM with the standings.\n"
            f"🎯 **Points:** right answer **3**, any vote **1**, being active in the chat **1 per message** (up to 5 a day), and a 3-day streak adds **+2 a day**.\n"
            f"🏆 **Leaderboard every night at 9:30 PM CT.** Weekly board resets Monday.\n\n"
            f"🥋 **Earn your belt** (all-time points):\n"
@@ -295,7 +295,7 @@ def clean_hook(v):
 
 def main():
     mode = sys.argv[1] if len(sys.argv) > 1 else "round"
-    hook = clean_hook(os.environ.get("OFFTOPIC_WEBHOOK_URL"))
+    hook = clean_hook(os.environ.get("DISCORD_WEBHOOK_URL"))
     s = load()
     {"round": round_, "leaderboard": leaderboard, "announce": announce, "halloffame": hall_of_fame}[mode](hook, s)
     save(s)

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""Morning Spark: one insight, test, or question every morning in #off-topic.
-Env: OFFTOPIC_WEBHOOK_URL (falls back to DISCORD_WEBHOOK_URL in the workflow).
+"""Morning Spark: one insight, test, or question every morning in #general.
+Env: DISCORD_WEBHOOK_URL (#general).
 State: state/spark.json (no repeats until the bank is used up)."""
 import json, os, random, urllib.request, urllib.error
 
@@ -58,7 +58,7 @@ def clean_hook(v):
     return m.group(0)
 
 def main():
-    hook = clean_hook(os.environ.get("OFFTOPIC_WEBHOOK_URL"))
+    hook = clean_hook(os.environ.get("DISCORD_WEBHOOK_URL"))
     try: s = json.load(open("state/spark.json"))
     except Exception: s = {"used": [], "last_type": ""}
     pool = [i for i in range(len(SPARKS)) if i not in s["used"]] or list(range(len(SPARKS)))
@@ -76,7 +76,7 @@ def main():
     except urllib.error.HTTPError as e:
         print("Discord rejected the post:", e.code, e.read()[:200]); raise
     except Exception as e:
-        print("Could not reach the webhook (check the OFFTOPIC_WEBHOOK_URL value):", type(e).__name__); raise
+        print("Could not reach the webhook (check the DISCORD_WEBHOOK_URL secret):", type(e).__name__); raise
     os.makedirs("state", exist_ok=True); json.dump(s, open("state/spark.json", "w"))
     print("posted spark", i, kind)
 

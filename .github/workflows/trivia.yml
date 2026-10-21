@@ -1,9 +1,8 @@
 name: Holistic Trivia
 on:
   schedule:
-    # UTC for Central Daylight Time (UTC-5): rounds 8a,10a,12p,2p,4p,6p,8p CT; leaderboard 9:30p CT
-    - cron: "0 13,15,17,19,21,23 * * *"
-    - cron: "0 1 * * *"
+    # UTC for Central Daylight Time (UTC-5): one question 12 PM CT; answer + standings 9:30 PM CT
+    - cron: "0 17 * * *"
     - cron: "30 2 * * *"
     - cron: "40 13 * * 5"   # Friday 8:40 AM CT all-time Hall of Fame
   push:
@@ -40,11 +39,10 @@ jobs:
           else echo "mode=round" >> $GITHUB_OUTPUT; fi
       - name: Run
         env:
-          OFFTOPIC_WEBHOOK_URL: ${{ secrets.OFFTOPIC_WEBHOOK_URL || vars.OFFTOPIC_WEBHOOK_URL || secrets.DISCORD_WEBHOOK_URL }}
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
           DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
         run: |
-          if [ -z "$OFFTOPIC_WEBHOOK_URL" ]; then echo "OFFTOPIC_WEBHOOK_URL not set yet, skipping"; exit 0; fi
+          if [ -z "$DISCORD_WEBHOOK_URL" ]; then echo "DISCORD_WEBHOOK_URL not set, skipping"; exit 0; fi
           python trivia.py ${{ steps.m.outputs.mode }}
       - name: Save state
         run: |
