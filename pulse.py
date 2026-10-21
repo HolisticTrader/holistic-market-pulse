@@ -212,17 +212,46 @@ def calls_block():
         rows.append((name, sym, side, tgt, inv, p, room))
 
     rows.sort(key=lambda row: row[6] if row[6] is not None else float("inf"))
+    if not rows:
+        return ""
 
-    lines = []
+    # Group each call by status so the reader sees what matters first.
+    NEAR = 3.0  # % from stop that counts as "close to stop"
+    groups = {"stop": [], "near": [], "hit": [], "run": []}
     for name, sym, side, tgt, inv, p, room in rows:
-        bits = [f"{name} {side} @ {p:.4g}"]
-        if tgt is not None:
-            dist = (tgt - p) / p * 100 * (1 if side == "long" else -1)
-            bits.append("T1 hit ✅" if dist <= 0 else f"{dist:.1f}% to T1 ({tgt:g})")
-        if inv is not None:
-            bits.append("INVALIDATED ❌" if room <= 0 else f"{room:.1f}% from stop ({inv:g})")
-        lines.append("• " + " | ".join(bits))
-    return "\n".join(lines)
+        dist = (tgt - p) / p * 100 * (1 if side == "long" else -1) if tgt is not None else None
+        arrow = "📈 Long" if side == "long" else "📉 Short"
+        head = f"**{name}** · {arrow} · price now **{_px(p)}**"
+        if tgt is None:
+            t_line = "🎯 Target: not posted yet"
+        elif dist <= 0:
+            t_line = f"🎯 Target {tgt:g}: **reached** ✅"
+        else:
+            t_line = f"🎯 Target {tgt:g}: {dist:.1f}% to go"
+        if inv is None:
+            s_line = "🛑 Stop: not posted yet"
+        elif room <= 0:
+            s_line = f"🛑 Stop {inv:g}: **hit** ❌ call closed"
+        else:
+            s_line = f"🛑 Stop {inv:g}: {room:.1f}% away"
+        entry = f"{head}\n{t_line}\n{s_line}"
+        if room is not None and room <= 0:
+            groups["stop"].append(entry)
+        elif dist is not None and dist <= 0:
+            groups["hit"].append(entry)
+        elif room is not None and room < NEAR:
+            groups["near"].append(entry)
+        else:
+            groups["run"].append(entry)
+
+    out = ["*How to read it: 🎯 = how far price is from the target. "
+           "🛑 = how far price is from the stop. Smaller stop % = more danger.*"]
+    for key, title in (("stop", "❌ STOPPED OUT"), ("near", f"⚠️ CLOSE TO STOP (under {NEAR:g}%)"),
+                       ("hit", "✅ TARGET REACHED"), ("run", "▶️ IN PROGRESS")):
+        if groups[key]:
+            out.append(f"\n__{title}__")
+            out.append("\n\n".join(groups[key]))
+    return "\n".join(out)
 
 def now_ct():
     # Central Time label without external tz libs: use zoneinfo when available.
@@ -245,7 +274,7 @@ def build(kind):
     head = f"**📡 Holistic Market Pulse | {now_ct()}**" if kind == "pulse" else f"**📊 LIVE BOARD** · updated {now_ct()}"
     embeds = [
         {"title": "💱 FOREX · % change", "description": table(FX)[:4000], "color": 0x2ECC71},
-        {"title": "🎯 On our calls", "description": (calls_block() or "No open calls.")[:4000], "color": 0xD4AF37},
+        {"title": "🎯 OUR OPEN CALLS", "description": (calls_block() or "No open calls.")[:4000], "color": 0xD4AF37},
         {"title": "🪙 CRYPTO · % change", "description": table(CRYPTO)[:4000], "color": 0xF39C12},
         {"title": "📈 STOCKS · % change", "description": table(STOCKS)[:4000], "color": 0x3498DB},
     ]
