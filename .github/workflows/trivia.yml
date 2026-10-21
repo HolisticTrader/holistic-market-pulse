@@ -1,10 +1,10 @@
 name: Holistic Trivia
 on:
   schedule:
-    # UTC for Central Daylight Time (UTC-5): one question 12 PM CT; answer + standings 9:30 PM CT
-    - cron: "0 17 * * *"
-    - cron: "30 2 * * *"
-    - cron: "40 13 * * 5"   # Friday 8:40 AM CT all-time Hall of Fame
+    # Both UTC hours listed (daylight + standard); gate.py keeps the right one.
+    - cron: "0 17,18 * * *"      # one question, 12 PM CT
+    - cron: "30 2,3 * * *"       # answer + Dojo standings, 9:30 PM CT
+    - cron: "40 13,14 * * 5"     # Friday 8:40 AM CT all-time Hall of Fame
   push:
     paths: ["launch.txt", "round.txt", "halloffame.txt"]   # announcement / round now / hall of fame now
   workflow_dispatch:
@@ -34,10 +34,21 @@ jobs:
             if echo "$CH" | grep -q '^launch.txt$'; then echo "mode=announce" >> $GITHUB_OUTPUT;
             elif echo "$CH" | grep -q '^halloffame.txt$'; then echo "mode=halloffame" >> $GITHUB_OUTPUT;
             else echo "mode=round" >> $GITHUB_OUTPUT; fi
-          elif [ "${{ github.event.schedule }}" = "30 2 * * *" ]; then echo "mode=leaderboard" >> $GITHUB_OUTPUT;
-          elif [ "${{ github.event.schedule }}" = "40 13 * * 5" ]; then echo "mode=halloffame" >> $GITHUB_OUTPUT;
+          elif [ "${{ github.event.schedule }}" = "30 2,3 * * *" ]; then echo "mode=leaderboard" >> $GITHUB_OUTPUT;
+          elif [ "${{ github.event.schedule }}" = "40 13,14 * * 5" ]; then echo "mode=halloffame" >> $GITHUB_OUTPUT;
           else echo "mode=round" >> $GITHUB_OUTPUT; fi
+      - name: Daylight-saving guard
+        id: g
+        run: |
+          if [ "${{ github.event_name }}" != "schedule" ]; then echo "go=true" >> $GITHUB_OUTPUT; exit 0; fi
+          case "${{ github.event.schedule }}" in
+            "0 17,18 * * *") python gate.py 12:00 >> $GITHUB_OUTPUT ;;
+            "30 2,3 * * *") python gate.py 21:30 >> $GITHUB_OUTPUT ;;
+            "40 13,14 * * 5") python gate.py 08:40 >> $GITHUB_OUTPUT ;;
+            *) echo "go=true" >> $GITHUB_OUTPUT ;;
+          esac
       - name: Run
+        if: steps.g.outputs.go == 'true'
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
           DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}

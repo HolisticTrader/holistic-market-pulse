@@ -1,11 +1,10 @@
 name: Holistic Market Pulse
 on:
   schedule:
-    # Times are UTC. While Central is on daylight time (UTC-5):
-    - cron: "*/15 * * * 0-5"      # live board refresh every 15 min, Sun-Fri (FX week)
-    - cron: "7 11-23 * * 1-5"     # weekdays hourly 6 AM-6 PM CT
-    - cron: "7 0-3 * * 2-6"       # weekdays hourly 7-10 PM CT (still the CT weekday)
-    - cron: "17 */4 * * 0,6"      # weekends: crypto-only every 4 hours
+    # Times are UTC and listed at both daylight and standard hours; gate.py keeps the right one.
+    - cron: "*/15 * * * 0-5"      # live board: edits the pinned message every 15 min (no new posts)
+    - cron: "15 20,21 * * 1-5"    # ONE market update a day: 3:15 PM CT, weekdays
+    - cron: "0 15,16 * * 6"       # ONE weekend crypto check: Saturday 10 AM CT
   push:
     paths: ["board_refresh.txt"]   # editing this file forces a board refresh
   workflow_dispatch:
@@ -27,9 +26,19 @@ jobs:
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then echo "mode=${{ inputs.mode }}" >> $GITHUB_OUTPUT;
           elif [ "${{ github.event_name }}" = "push" ]; then echo "mode=board" >> $GITHUB_OUTPUT;
           elif [ "${{ github.event.schedule }}" = "*/15 * * * 0-5" ]; then echo "mode=board" >> $GITHUB_OUTPUT;
-          elif [ "${{ github.event.schedule }}" = "17 */4 * * 0,6" ]; then echo "mode=crypto" >> $GITHUB_OUTPUT;
+          elif [ "${{ github.event.schedule }}" = "0 15,16 * * 6" ]; then echo "mode=crypto" >> $GITHUB_OUTPUT;
           else echo "mode=pulse" >> $GITHUB_OUTPUT; fi
+      - name: Daylight-saving guard
+        id: g
+        run: |
+          if [ "${{ github.event_name }}" != "schedule" ]; then echo "go=true" >> $GITHUB_OUTPUT; exit 0; fi
+          case "${{ github.event.schedule }}" in
+            "15 20,21 * * 1-5") python gate.py 15:15 >> $GITHUB_OUTPUT ;;
+            "0 15,16 * * 6") python gate.py 10:00 >> $GITHUB_OUTPUT ;;
+            *) echo "go=true" >> $GITHUB_OUTPUT ;;
+          esac
       - name: Run
+        if: steps.g.outputs.go == 'true'
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
           DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}

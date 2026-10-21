@@ -63,3 +63,9 @@ These ideas are on the roadmap and are not available as commands yet:
 - **24/7 Forex Mentor** — `/ask-mentor`, `/lesson`, and `/study-plan` for terminology, strategy questions, lesson-linked answers, study plans, flashcards, and quizzes using only approved community materials.
 
 Any AI-generated market commentary is educational, may be wrong, and is not a guaranteed entry or financial advice. Firm rules can change; verify the selected program’s current official terms before relying on a tracker warning.
+
+## Posting rhythm (#general)
+Weekdays: 6:48 AM brief · 7:33 AM Morning Spark · 12 PM trivia · 3:15 PM market update · 9:30 PM answer + Dojo standings. Saturday: 10 AM crypto check. The live board edits its pinned message every 15 min and never adds posts. Every time is Central and survives the daylight-saving change (gate.py).
+
+## Dojo chat points
+Reply to Tony or a #trade-alert setup = 3 · reply to another trader = 2 · any other message = 1 · max 10 a day.

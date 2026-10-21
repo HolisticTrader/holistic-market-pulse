@@ -316,7 +316,7 @@ def build(kind):
         q = random.choice(QUESTIONS)
         a, ac = m[0] if m else ("Gold", 0.0)
         b, bc = m[1] if len(m) > 1 else ("DXY", 0.0)
-        content += "\n💬 **Your read:** " + q.format(a=a, ac=ac, b=b, bc=bc)
+        content += "\n💬 **Your read:** " + q.format(a=a, ac=ac, b=b, bc=bc) + "\n-# Hit reply with your answer. Replies earn 2 Dojo points."
     embeds[-1]["footer"] = {"text": "30D · 90D · 6M · 1Y · YTD % change. Data: Yahoo Finance, may be delayed. Not financial advice."}
     return content, embeds
 

@@ -14,7 +14,12 @@ GUILD = os.environ.get("GUILD_ID", "1342649158187749457")
 UA = {"User-Agent": "Mozilla/5.0 (HolisticTrivia)", "Content-Type": "application/json"}
 L = "ABCD"
 POLL_HOURS = 8   # one question a day: posts 12 PM CT, closes 8 PM, answer + standings 9:30 PM
-PTS_CORRECT, PTS_VOTE, PTS_MSG, MSG_CAP, STREAK_BONUS = 3, 1, 1, 5, 2
+PTS_CORRECT, PTS_VOTE, STREAK_BONUS = 3, 1, 2
+# Chat points: a reply to Tony or to a setup in #trade-alert = 3, a reply to anyone else = 2,
+# any other message = 1. Capped at ACT_CAP a day so spam can't farm belts.
+PTS_MSG, PTS_REPLY, PTS_REPLY_TONY, ACT_CAP = 1, 2, 3, 10
+TONY = os.environ.get("TRADER_NAME", "immaculatetony").lower()
+SETUP_CHANNEL = os.environ.get("TRADE_ALERT_CHANNEL_ID", "1546270988100960297")
 BELTS = [(0, "⚪", "White"), (10, "🟡", "Yellow"), (25, "🟠", "Orange"), (50, "🟢", "Green"),
          (100, "🔵", "Blue"), (175, "🟣", "Purple"), (275, "🟤", "Brown"), (400, "⚫", "Black")]
 
@@ -149,9 +154,17 @@ def score_activity(s, tok):
             a = m.get("author", {})
             if a.get("bot") or m.get("webhook_id"): continue
             if datetime.datetime.fromisoformat(m["timestamp"]) <= start: continue
-            per.setdefault(a["id"], [uname(a), 0])[1] += 1
+            pts = PTS_MSG
+            ref = m.get("referenced_message")
+            if ref:
+                ra = ref.get("author", {})
+                who = (ra.get("username", "") + " " + (ra.get("global_name") or "")).lower()
+                if ra.get("id") == a.get("id"): pts = PTS_MSG                      # replying to yourself
+                elif TONY in who or ref.get("channel_id") == SETUP_CHANNEL: pts = PTS_REPLY_TONY
+                else: pts = PTS_REPLY
+            per.setdefault(a["id"], [uname(a), 0])[1] += pts
     for uid, (name, n) in per.items():
-        add(s, uid, name, min(n, MSG_CAP) * PTS_MSG)
+        add(s, uid, name, min(n, ACT_CAP))
     s["last_scan"] = datetime.datetime.now(datetime.timezone.utc).isoformat()
 
 BELT_COLORS = {"White": 0xFFFFFF, "Yellow": 0xF1C40F, "Orange": 0xE67E22, "Green": 0x2ECC71,
@@ -279,7 +292,7 @@ def announce(hook, s):
            f"Starting today, {where} runs **Holistic Trivia** once a day: technical analysis, market history and forex questions, "
            f"plus quotes from the legends who built this game.\n\n"
            f"⏰ **One question a day at 12 PM CT.** Voting closes at 8 PM. The answer drops at 9:30 PM with the standings.\n"
-           f"🎯 **Points:** right answer **3**, any vote **1**, being active in the chat **1 per message** (up to 5 a day), and a 3-day streak adds **+2 a day**.\n"
+           f"🎯 **Points:** right answer **3**, any vote **1**, **replying to my setups 3**, replying to another trader **2**, any other message **1** (up to 10 a day), and a 3-day streak adds **+2 a day**.\n"
            f"🏆 **Leaderboard every night at 9:30 PM CT.** Weekly board resets Monday.\n\n"
            f"🥋 **Earn your belt** (all-time points):\n"
            f"⚪ White → 🟡 Yellow (10) → 🟠 Orange (25) → 🟢 Green (50) → 🔵 Blue (100) → 🟣 Purple (175) → 🟤 Brown (275) → ⚫ **Black Belt (400)**\n\n"
