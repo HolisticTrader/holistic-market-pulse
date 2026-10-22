@@ -3,6 +3,7 @@
 Env (GitHub secrets): X_API_KEY, X_API_SECRET, X_ACCESS_TOKEN, X_ACCESS_SECRET
 State: state/xpost.json remembers recent picks so posts don't repeat back-to-back."""
 import os, json, time, random, hmac, hashlib, base64, urllib.parse, urllib.request, uuid
+import netretry  # retries temporary network/Discord/X hiccups
 
 OFFERS = {
  "substack": "https://immaculatetonyeth.substack.com",

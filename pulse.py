@@ -38,6 +38,7 @@ CALLS = [
 UA = {"User-Agent": "Mozilla/5.0 (HolisticMarketPulse)"}
 
 import functools
+import netretry  # retries temporary network/Discord/X hiccups
 PERIODS = [("30D", 30), ("90D", 90), ("6M", 182), ("1Y", 365), ("YTD", None)]
 
 @functools.lru_cache(maxsize=None)

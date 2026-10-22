@@ -5,6 +5,7 @@
                                (needs DISCORD_BOT_TOKEN with Server Members Intent)
 Env: DISCORD_WEBHOOK_URL (#general), DISCORD_BOT_TOKEN, GUILD_ID"""
 import json, os, sys, datetime, random, urllib.request, urllib.error
+import netretry  # retries temporary network/Discord/X hiccups
 
 GUILD = os.environ.get("GUILD_ID", "1342649158187749457")
 STATE = "state/welcome.json"

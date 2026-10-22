@@ -3,6 +3,7 @@
 The Holistic X hot feed scheduled task writes the finished post into xfeed.txt and pushes it;
 the push runs this through .github/workflows/xfeed.yml. Empty file = nothing to post."""
 import json, os, re, urllib.request
+import netretry  # retries temporary network/Discord/X hiccups
 
 UA = {"User-Agent": "Mozilla/5.0 (HolisticMarketPulse)"}
 

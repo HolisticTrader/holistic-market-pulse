@@ -8,6 +8,7 @@ Env: DISCORD_WEBHOOK_URL (#general: trivia, Dojo standings, Hall of Fame all pos
 State: state/trivia.json (committed back by the workflow)."""
 import json, os, sys, random, datetime, urllib.request, urllib.error
 from trivia_bank import QUESTIONS, QUOTES
+import netretry  # retries temporary network/Discord/X hiccups
 
 STATE = "state/trivia.json"
 GUILD = os.environ.get("GUILD_ID", "1342649158187749457")

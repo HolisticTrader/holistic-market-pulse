@@ -9,10 +9,11 @@ permissions:
 concurrency: xpost
 jobs:
   run:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
       - name: Post
@@ -23,8 +24,5 @@ jobs:
           X_ACCESS_SECRET: ${{ secrets.X_ACCESS_SECRET }}
         run: python xpost.py
       - name: Save state
-        run: |
-          git config user.name "holistic-x-bot"
-          git config user.email "actions@users.noreply.github.com"
-          git add state/ 2>/dev/null || true
-          git diff --cached --quiet || (git commit -m "x post state [skip ci]" && git pull --rebase && git push)
+        if: always()
+        run: bash .github/scripts/save_state.sh "holistic-x-bot" "x post state [skip ci]" state/

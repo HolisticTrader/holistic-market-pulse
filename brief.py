@@ -6,6 +6,7 @@ Env: DISCORD_WEBHOOK_URL (#general)."""
 import json, os, re, datetime, urllib.request, urllib.parse, html
 from zoneinfo import ZoneInfo
 import pulse  # reuse prices + call list
+import netretry  # retries temporary network/Discord/X hiccups
 
 CT = ZoneInfo("America/Chicago")
 UA = {"User-Agent": "Mozilla/5.0 (HolisticBrief)"}

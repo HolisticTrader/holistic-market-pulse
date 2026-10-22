@@ -3,6 +3,7 @@
 Env: DISCORD_WEBHOOK_URL (#general).
 State: state/spark.json (no repeats until the bank is used up)."""
 import json, os, random, urllib.request, urllib.error
+import netretry  # retries temporary network/Discord/X hiccups
 
 SPARKS = [
  # ---------- insights ----------
