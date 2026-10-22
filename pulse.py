@@ -293,23 +293,10 @@ QUESTIONS = [
 def build(kind):
     """Returns (content, embeds). Tables go in embeds so the multi-period columns fit Discord's limits."""
     head = f"**📡 Holistic Market Pulse | {now_ct()}**" if kind == "pulse" else f"**📊 LIVE BOARD** · updated {now_ct()}"
+    # Forex / crypto / stocks % change tables removed (Tony, Oct 21). Only the open calls show.
     embeds = [
-        {"title": "💱 FOREX · % change", "description": table(FX)[:4000], "color": 0x2ECC71},
         {"title": "🎯 OUR OPEN CALLS", "description": (calls_block() or "No open calls.")[:4000], "color": 0xD4AF37},
-        {"title": "🪙 CRYPTO · % change", "description": table(CRYPTO)[:4000], "color": 0xF39C12},
-        {"title": "📈 STOCKS · % change", "description": table(STOCKS)[:4000], "color": 0x3498DB},
     ]
-    if kind == "crypto":
-        head = f"**🪙 Weekend Crypto Pulse | {now_ct()}**"
-        embeds = [embeds[2]]
-        m = movers(CRYPTO)
-        a, ac = m[0] if m else ("BTC", 0.0)
-        content = head + "\n💬 **Your read:** " + random.choice([
-            "{a} is {ac:+.2f}% on the week. Real flow or thin-liquidity noise?",
-            "Weekend crypto: {a} {ac:+.2f}% this week. Are you trading it or waiting for Monday?",
-            "Does {a}'s weekly move align with the monthly trend, or is it countertrend? What weekly evidence would confirm or invalidate a swing thesis?"]).format(a=a, ac=ac)
-        embeds[-1]["footer"] = {"text": "30D · 90D · 6M · 1Y · YTD % change. Data: Yahoo Finance. Not financial advice."}
-        return content, embeds
     content = head
     if kind == "pulse":
         m = movers(FX + CRYPTO + STOCKS)
@@ -317,7 +304,7 @@ def build(kind):
         a, ac = m[0] if m else ("Gold", 0.0)
         b, bc = m[1] if len(m) > 1 else ("DXY", 0.0)
         content += "\n💬 **Your read:** " + q.format(a=a, ac=ac, b=b, bc=bc) + "\n-# Hit reply with your answer. Replies earn 2 Dojo points."
-    embeds[-1]["footer"] = {"text": "30D · 90D · 6M · 1Y · YTD % change. Data: Yahoo Finance, may be delayed. Not financial advice."}
+    embeds[-1]["footer"] = {"text": "Data: Yahoo Finance, may be delayed. Not financial advice."}
     return content, embeds
 
 def send(url, payload, method="POST"):
@@ -328,6 +315,9 @@ def send(url, payload, method="POST"):
 
 def main():
     kind = sys.argv[1] if len(sys.argv) > 1 else "pulse"
+    if kind == "crypto":
+        print("Weekend crypto check retired with the % change tables: nothing to post.")
+        return
     hook = os.environ["DISCORD_WEBHOOK_URL"].rstrip("/")
     content, embeds = build(kind)
     payload = {"content": content, "embeds": embeds, "username": "Holistic Market Pulse", "allowed_mentions": {"parse": []}}

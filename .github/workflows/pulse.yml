@@ -4,7 +4,6 @@ on:
     # Times are UTC and listed at both daylight and standard hours; gate.py keeps the right one.
     - cron: "*/15 * * * 0-5"      # live board: edits the pinned message every 15 min (no new posts)
     - cron: "15 20,21 * * 1-5"    # ONE market update a day: 3:15 PM CT, weekdays
-    - cron: "0 15,16 * * 6"       # ONE weekend crypto check: Saturday 10 AM CT
   push:
     paths: ["board_refresh.txt"]   # editing this file forces a board refresh
   workflow_dispatch:
