@@ -1,10 +1,6 @@
 name: Holistic Trivia
 on:
-  schedule:
-    # Both UTC hours listed (daylight + standard); gate.py keeps the right one.
-    - cron: "0 17,18 * * *"      # one question, 12 PM CT
-    - cron: "30 2,3 * * *"       # answer + Dojo standings, 9:30 PM CT
-    - cron: "40 13,14 * * 5"     # Friday 8:40 AM CT all-time Hall of Fame
+  # timed runs are fired by the Post Clock (tick.yml); GitHub cron here ran hours late
   push:
     paths: ["launch.txt", "round.txt", "halloffame.txt"]   # announcement / round now / hall of fame now
   workflow_dispatch:

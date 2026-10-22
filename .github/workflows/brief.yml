@@ -1,7 +1,6 @@
 name: Morning Brief
 on:
-  schedule:
-    - cron: "48 11,12 * * 1-5"   # 6:48 AM CT trading days (both UTC hours; gate.py picks one)
+  # timed runs are fired by the Post Clock (tick.yml); GitHub cron here ran hours late
   push:
     paths: ["brief.txt"]      # editing brief.txt posts one now
   workflow_dispatch:

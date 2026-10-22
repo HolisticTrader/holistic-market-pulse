@@ -1,0 +1,36 @@
+name: Post Clock
+# Fires every timed Discord post once a day when it's due (see tick.py).
+# Triggered hourly by a cloud task (reliable) and by GitHub cron (bonus; GitHub runs it late).
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: write
+concurrency:
+  group: tick
+  cancel-in-progress: false
+jobs:
+  tick:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Decide what's due
+        run: python tick.py > due.txt && cat due.txt
+      - name: Record (before firing, so a job never double-posts)
+        run: bash .github/scripts/save_state.sh "holistic-clock" "clock state [skip ci]" state/tick.json
+      - name: Fire due workflows
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          while IFS=$'\t' read -r wf inputs why; do
+            [ -z "$wf" ] && continue
+            echo "firing $wf ($why)"
+            echo "{\"ref\":\"main\",\"inputs\":$inputs}" | gh api -X POST "repos/${{ github.repository }}/actions/workflows/$wf/dispatches" --input - \
+              || echo "::warning::could not start $wf ($why)"
+          done < due.txt

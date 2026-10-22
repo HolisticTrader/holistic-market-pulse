@@ -1,7 +1,6 @@
 name: Morning Spark
 on:
-  schedule:
-    - cron: "33 12,13 * * *"   # 7:33 AM CT every day (both UTC hours; gate.py picks one)
+  # timed runs are fired by the Post Clock (tick.yml); GitHub cron here ran hours late
   push:
     paths: ["spark.txt"]    # editing spark.txt posts one now
   workflow_dispatch:

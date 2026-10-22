@@ -2,8 +2,7 @@ name: Daily Health Check
 # Runs once a day. If a token/webhook/key dies, THIS is the one email you get, with the fix spelled out.
 # Everything else is built to keep running quietly through temporary hiccups.
 on:
-  schedule:
-    - cron: "17 13 * * *"   # ~8:17 AM CT (7:17 during standard time)
+  # timed runs are fired by the Post Clock (tick.yml); GitHub cron here ran hours late
   workflow_dispatch:
 jobs:
   check:
