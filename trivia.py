@@ -11,7 +11,7 @@ from trivia_bank import QUESTIONS, QUOTES
 
 STATE = "state/trivia.json"
 GUILD = os.environ.get("GUILD_ID", "1342649158187749457")
-UA = {"User-Agent": "Mozilla/5.0 (HolisticTrivia)", "Content-Type": "application/json"}
+UA = {"User-Agent": "DiscordBot (https://github.com/HolisticTrader/holistic-market-pulse, 1.1)", "Content-Type": "application/json"}
 L = "ABCD"
 POLL_HOURS = 8   # one question a day: posts 12 PM CT, closes 8 PM, answer + standings 9:30 PM
 PTS_CORRECT, PTS_VOTE, STREAK_BONUS = 3, 1, 2

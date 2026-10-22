@@ -4,11 +4,11 @@
   python welcome.py new        greet members who joined since last run: public shout-out + personal DM
                                (needs DISCORD_BOT_TOKEN with Server Members Intent)
 Env: DISCORD_WEBHOOK_URL (#general), DISCORD_BOT_TOKEN, GUILD_ID"""
-import json, os, sys, datetime, random, urllib.request
+import json, os, sys, datetime, random, urllib.request, urllib.error
 
 GUILD = os.environ.get("GUILD_ID", "1342649158187749457")
 STATE = "state/welcome.json"
-UA = {"User-Agent": "Mozilla/5.0 (HolisticWelcome)", "Content-Type": "application/json"}
+UA = {"User-Agent": "DiscordBot (https://github.com/HolisticTrader/holistic-market-pulse, 1.1)", "Content-Type": "application/json"}
 SUBSTACK = "https://immaculatetonyeth.substack.com"
 TRADE_ALERT = "1546270988100960297"
 
@@ -80,7 +80,12 @@ def new_members(hook, s):
     auth = f"Bot {tok}"
     now = datetime.datetime.now(datetime.timezone.utc)
     since = datetime.datetime.fromisoformat(s["since"]) if s.get("since") else now  # first run: start fresh, don't spam old members
-    members = req(f"https://discord.com/api/v10/guilds/{GUILD}/members?limit=1000", auth=auth)
+    try:
+        members = req(f"https://discord.com/api/v10/guilds/{GUILD}/members?limit=1000", auth=auth)
+    except urllib.error.HTTPError as e:
+        body = e.read()[:300].decode("utf-8", "replace")
+        print(f"::warning::Discord member list failed: HTTP {e.code} {body}")
+        return
     fresh = []
     for m in members:
         u = m.get("user", {})
