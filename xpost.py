@@ -8,7 +8,7 @@ OFFERS = {
  "substack": "https://immaculatetonyeth.substack.com",
  "ebook": "https://holistictrader.gumroad.com/l/holistictraders",
  "udemy": "https://udemy.com/course/holistictraders/?referralcode=0facd4fc29218d594d31",
- "discord": "https://discord.gg/ebt5mtwfr",
+ "discord": "https://discord.gg/PYUKcPWdj8",
  "shop": "https://holistictrader.threadless.com/",
  "coffee": "https://buymeacoffee.com/ImmaculateTony.Eth",
 }
