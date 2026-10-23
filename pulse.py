@@ -251,15 +251,18 @@ def calls_block():
         rows.append((name, side, entry, entry_value, tgts, inv, p, room))
     rows.sort(key=lambda r: r[7] if r[7] is not None else float("inf"))
     if not rows:
-        return ""
+        return "", 0xD4AF37
 
     NEAR = 3.0  # % from stop that counts as "close to stop"
     groups = {"stop": [], "near": [], "hit": [], "profit": [], "below": [], "flat": [], "missing": []}
+    total_pnl_low = total_pnl_high = 0.0
+    scored_calls = missing_score_calls = 0
     for name, side, entry, entry_value, tgts, inv, p, room in rows:
         arrow = "📈 Long" if side == "long" else "📉 Short"
         area = "Retail" if side == "long" else "Wholesale"
         lines = [f"**{name}** · {arrow} · current **{_px(p)}**"]
         if entry_value is None:
+            missing_score_calls += 1
             lines.append("📍 Entry: **not on record** · P/L unavailable")
             status = "missing"
         else:
@@ -284,6 +287,9 @@ def calls_block():
                 stop_distance = abs(entry_value - inv)
                 pnl_low = RISK_DOLLARS_LOW * move / stop_distance
                 pnl_high = RISK_DOLLARS_HIGH * move / stop_distance
+                total_pnl_low += pnl_low
+                total_pnl_high += pnl_high
+                scored_calls += 1
                 if move > 0:
                     amount = f"+${pnl_low:,.0f} to +${pnl_high:,.0f}"
                 elif move < 0:
@@ -296,6 +302,7 @@ def calls_block():
                 else:
                     lines.append(f"↳ Risk range: ${RISK_DOLLARS_LOW:,.0f}–${RISK_DOLLARS_HIGH:,.0f} (1%–1.5% of ${FTMO_BALANCE:,.0f}); fees/swaps excluded.")
             else:
+                missing_score_calls += 1
                 lines.append(f"{icon} **{label}** · {sign}{move_label} · USD estimate needs a valid stop")
         t1_hit = False
         if not tgts:
@@ -317,10 +324,27 @@ def calls_block():
         elif t1_hit: groups["hit"].append(entry_text)
         else: groups[status].append(entry_text)
 
+    score_color = 0xD4AF37
     out = [
         f"*FTMO example: ${FTMO_BALANCE:,.0f} account · {RISK_PERCENT_LOW:.0%}–{RISK_PERCENT_HIGH:.1%} risk per call (${RISK_DOLLARS_LOW:,.0f}–${RISK_DOLLARS_HIGH:,.0f} at the stop). "
         "P/L is estimated from entry, current price, and stop; quotes may be delayed.*"
     ]
+    if scored_calls:
+        net_low = min(total_pnl_low, total_pnl_high)
+        net_high = max(total_pnl_low, total_pnl_high)
+        low_pct, high_pct = net_low / FTMO_BALANCE * 100, net_high / FTMO_BALANCE * 100
+        icon = "🐂" if net_low > 0 else "🐻" if net_high < 0 else "⚖️"
+        score_color = 0x39FF14 if net_low > 0 else 0xFF1744 if net_high < 0 else 0xD4AF37
+        fmt_dollars = lambda amount: f"+${amount:,.0f}" if amount > 0 else f"−${abs(amount):,.0f}" if amount < 0 else "$0"
+        fmt_percent = lambda amount: f"+{amount:.2f}%" if amount > 0 else f"−{abs(amount):.2f}%" if amount < 0 else "0.00%"
+        score = (f"{icon} **OVERALL OPEN-CALL SCORE · {fmt_percent(low_pct)} to {fmt_percent(high_pct)}** "
+                 f"({fmt_dollars(net_low)} to {fmt_dollars(net_high)}) · {scored_calls} calls with valid entry/stop")
+        if missing_score_calls:
+            score += f" · {missing_score_calls} unscored (entry/stop missing)"
+        out.insert(0, score)
+    else:
+        out.insert(0, f"🟡 **OVERALL OPEN-CALL SCORE · unavailable** · no calls have both a recorded entry and valid stop ({missing_score_calls} unscored)")
+    return "\\n".join(out), score_color
     for key, title in (("stop", "❌ STOPPED OUT"), ("near", f"⚠️ CLOSE TO STOP (under {NEAR:g}%)"),
                        ("hit", "✅ IN OR PAST THE TARGET AREA"), ("profit", "🟢 IN PROFIT"),
                        ("below", "🔴 BELOW ENTRY"), ("flat", "⚪ AT ENTRY"),
@@ -350,8 +374,9 @@ def build(kind):
     """Returns (content, embeds). Tables go in embeds so the multi-period columns fit Discord's limits."""
     head = f"**📡 Holistic Market Pulse | {now_ct()}**" if kind == "pulse" else f"**📊 LIVE BOARD** · updated {now_ct()}"
     # Forex / crypto / stocks % change tables removed (Tony, Oct 21). Only the open calls show.
+    calls_text, calls_color = calls_block()
     embeds = [
-        {"title": "🎯 OUR OPEN CALLS", "description": (calls_block() or "No open calls.")[:4000], "color": 0xD4AF37},
+        {"title": "🎯 OUR OPEN CALLS", "description": (calls_text or "No open calls.")[:4000], "color": calls_color},
     ]
     content = head
     if kind == "pulse":
