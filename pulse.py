@@ -20,19 +20,19 @@ STOCKS = [("^GSPC","S&P 500",1),("^IXIC","Nasdaq",1),("^DJI","Dow",0),("^VIX","V
 
 # Tony's open calls. Edit this list when calls change. None = not published.
 CALLS = [
-  # name, symbol, direction, target areas, invalidation
+  # name, symbol, direction, entry (None until recorded), target areas, invalidation
   # Target areas: a list, T1 first. Each is a zone (low, high) or a single level.
   # Long -> target is the RETAIL area. Short -> target is the WHOLESALE area.
-  ("GBP/JPY","GBPJPY=X","short",[184.40],220.32),
-  ("AUD/JPY","AUDJPY=X","short",[(100.0,110.0),(88.0,95.0)],113.0),
-  ("CHF/JPY","CHFJPY=X","long",[204.0],None),
-  ("USD/MXN","USDMXN=X","long",[18.80,21.00],17.50),
-  ("USD/NOK","USDNOK=X","long",[10.62],9.07),
-  ("AUD/USD","AUDUSD=X","short",[],0.7421),
-  ("GBP/AUD","GBPAUD=X","long",[2.046],1.852),
-  ("EUR/CHF","EURCHF=X","short",[],0.9445),
-  ("NZD/JPY","NZDJPY=X","long",[94.99],86.50),
-  ("USD/ZAR","USDZAR=X","long",[(17.00,17.80)],15.65),
+  ("GBP/JPY","GBPJPY=X","short",None,[184.40],220.32),
+  ("AUD/JPY","AUDJPY=X","short",None,[(100.0,110.0),(88.0,95.0)],113.0),
+  ("CHF/JPY","CHFJPY=X","long",None,[204.0],None),
+  ("USD/MXN","USDMXN=X","long",None,[18.80,21.00],17.50),
+  ("USD/NOK","USDNOK=X","long",None,[10.62],9.07),
+  ("AUD/USD","AUDUSD=X","short",None,[],0.7421),
+  ("GBP/AUD","GBPAUD=X","long",None,[2.046],1.852),
+  ("EUR/CHF","EURCHF=X","short",None,[],0.9445),
+  ("NZD/JPY","NZDJPY=X","long",None,[94.99],86.50),
+  ("USD/ZAR","USDZAR=X","long",None,[(17.00,17.80)],15.65),
 ]
 
 UA = {"User-Agent": "Mozilla/5.0 (HolisticMarketPulse)"}
@@ -139,24 +139,30 @@ def parse_calls(text):
     Also 'Closed $USDJPY' removes a call. Returns list of (action, tuple)."""
     out = []
     text = html.unescape(re.sub(r"<[^>]+>", "\n", text))
-    for m in re.finditer(r"(?i)\b(closed|close|exit(?:ed)?|out of|stopped out of|invalidated)\s*:?\s*\$([A-Za-z/]{3,10})", text):
+    for m in re.finditer(r"(?i)\b(closed|close|exit(?:ed)?|out of|stopped out of|invalidated)\s*:?\s*$([A-Za-z/]{3,10})", text):
         out.append(("close", m.group(2)))
     # split into chunks starting at each $TICKER
-    for chunk in re.split(r"(?=\$[A-Za-z][A-Za-z/]{2,9}\b)", text):
-        m = re.match(r"\$([A-Za-z/]{3,10})", chunk)
+    for chunk in re.split(r"(?=$[A-Za-z][A-Za-z/]{2,9}\b)", text):
+        m = re.match(r"$([A-Za-z/]{3,10})", chunk)
         if not m: continue
         chunk = chunk[:600]
         d = re.search(r"(?i)\b(long|short|buy|sell|bullish|bearish)\b", chunk)
+        en = re.search(r"(?i)\b(?:entry|entered|fill(?:ed)?)\b[^\n]{0,30}?(?<![A-Za-z\d.,])" + NUM + r"(?:\s*(?:-|–|—|to)\s*" + NUM + ")?", chunk)
         tg = re.search(r"(?i)\b(?:target|tp|t1)\b[^\n]{0,30}?(?<![A-Za-z\d.,])" + NUM + r"(?:\s*(?:-|–|—|to)\s*" + NUM + ")?", chunk)
         iv = re.search(r"(?i)\b(?:invalid(?:ation)?|stop(?:\s*loss)?|sl|wrong)\b[^\n]{0,40}?(?<![A-Za-z\d.,])" + NUM, chunk)
         if not d or not (tg or iv): continue
         side = "long" if d.group(1).lower() in ("long", "buy", "bullish") else "short"
         sym, name = yahoo_symbol(m.group(1))
+        entry = None
+        if en:
+            first = _f(en.group(1))
+            second = _f(en.group(2)) if en.group(2) else None
+            entry = (min(first, second), max(first, second)) if second else first
         tgt = []
         if tg:
             a = _f(tg.group(1)); b = _f(tg.group(2)) if tg.group(2) else None
             tgt = [(min(a, b), max(a, b)) if b else a]
-        out.append(("open", (name, sym, side, tgt, _f(iv.group(1)) if iv else None)))
+        out.append(("open", (name, sym, side, entry, tgt, _f(iv.group(1)) if iv else None)))
     return out
 
 def _get(url, headers=None):
@@ -226,26 +232,71 @@ def _target_status(side, p, t):
     near = lo if side == "long" else hi  # the edge price reaches first
     return False, f"{label} · {abs(near - p) / p * 100:.1f}% to the area"
 
+FTMO_BALANCE = 100000.0
+RISK_PERCENT_LOW = 0.01
+RISK_PERCENT_HIGH = 0.015
+RISK_DOLLARS_LOW = FTMO_BALANCE * RISK_PERCENT_LOW
+RISK_DOLLARS_HIGH = FTMO_BALANCE * RISK_PERCENT_HIGH
+
 def calls_block():
     rows = []
-    for name, sym, side, tgts, inv in all_calls()[-12:]:  # newest 12 to stay under Discord's limits
+    for name, sym, side, entry, tgts, inv in all_calls()[-12:]:  # newest 12 to stay under Discord's limits
         p, _ = quote(sym)
         if p is None:
             continue
         if tgts is None: tgts = []
         elif not isinstance(tgts, list): tgts = [tgts]
+        entry_value = (sum(entry) / 2) if isinstance(entry, (tuple, list)) else entry
         room = (p - inv) / p * 100 * (1 if side == "long" else -1) if inv is not None else None
-        rows.append((name, side, tgts, inv, p, room))
-    rows.sort(key=lambda r: r[5] if r[5] is not None else float("inf"))
+        rows.append((name, side, entry, entry_value, tgts, inv, p, room))
+    rows.sort(key=lambda r: r[7] if r[7] is not None else float("inf"))
     if not rows:
         return ""
 
     NEAR = 3.0  # % from stop that counts as "close to stop"
-    groups = {"stop": [], "near": [], "hit": [], "run": []}
-    for name, side, tgts, inv, p, room in rows:
+    groups = {"stop": [], "near": [], "hit": [], "profit": [], "below": [], "flat": [], "missing": []}
+    for name, side, entry, entry_value, tgts, inv, p, room in rows:
         arrow = "📈 Long" if side == "long" else "📉 Short"
         area = "Retail" if side == "long" else "Wholesale"
-        lines = [f"**{name}** · {arrow} · price now **{_px(p)}**"]
+        lines = [f"**{name}** · {arrow} · current **{_px(p)}**"]
+        if entry_value is None:
+            lines.append("📍 Entry: **not on record** · P/L unavailable")
+            status = "missing"
+        else:
+            if isinstance(entry, (tuple, list)) and entry[0] != entry[1]:
+                entry_label = f"{_px(entry[0])}–{_px(entry[1])} (midpoint {_px(entry_value)})"
+            else:
+                entry_label = _px(entry_value)
+            lines.append(f"📍 Entry: {entry_label}")
+            move = (p - entry_value) * (1 if side == "long" else -1)
+            pip_size = 0.01 if name.endswith("/JPY") else 0.0001 if "/" in name else None
+            move_label = f"{abs(move) / pip_size:.1f} pips" if pip_size else f"{abs(move):.4g} price units"
+            sign = "+" if move > 0 else "−" if move < 0 else ""
+            if move > 0:
+                label, icon, status = "IN PROFIT", "🟢", "profit"
+            elif move < 0:
+                label, icon, status = "BELOW ENTRY", "🔴", "below"
+            else:
+                label, icon, status = "AT ENTRY", "⚪", "flat"
+
+            valid_stop = inv is not None and ((inv < entry_value) if side == "long" else (inv > entry_value))
+            if valid_stop:
+                stop_distance = abs(entry_value - inv)
+                pnl_low = RISK_DOLLARS_LOW * move / stop_distance
+                pnl_high = RISK_DOLLARS_HIGH * move / stop_distance
+                if move > 0:
+                    amount = f"+${pnl_low:,.0f} to +${pnl_high:,.0f}"
+                elif move < 0:
+                    amount = f"−${abs(pnl_high):,.0f} to −${abs(pnl_low):,.0f}"
+                else:
+                    amount = "$0"
+                lines.append(f"{icon} **{label}** · {sign}{move_label} · est. **{amount}**")
+                if isinstance(entry, (tuple, list)) and entry[0] != entry[1]:
+                    lines.append(f"↳ Uses entry-zone midpoint. Risk range: ${RISK_DOLLARS_LOW:,.0f}–${RISK_DOLLARS_HIGH:,.0f} (1%–1.5% of ${FTMO_BALANCE:,.0f}); fees/swaps excluded.")
+                else:
+                    lines.append(f"↳ Risk range: ${RISK_DOLLARS_LOW:,.0f}–${RISK_DOLLARS_HIGH:,.0f} (1%–1.5% of ${FTMO_BALANCE:,.0f}); fees/swaps excluded.")
+            else:
+                lines.append(f"{icon} **{label}** · {sign}{move_label} · USD estimate needs a valid stop")
         t1_hit = False
         if not tgts:
             lines.append(f"🎯 {area} area (target): not posted yet")
@@ -260,16 +311,20 @@ def calls_block():
             lines.append(f"🛑 Stop {_px(inv)}: **hit** ❌ call closed")
         else:
             lines.append(f"🛑 Stop {_px(inv)}: {room:.1f}% away")
-        entry = "\n".join(lines)
-        if room is not None and room <= 0: groups["stop"].append(entry)
-        elif t1_hit: groups["hit"].append(entry)
-        elif room is not None and room < NEAR: groups["near"].append(entry)
-        else: groups["run"].append(entry)
+        entry_text = "\n".join(lines)
+        if room is not None and room <= 0: groups["stop"].append(entry_text)
+        elif room is not None and room < NEAR: groups["near"].append(entry_text)
+        elif t1_hit: groups["hit"].append(entry_text)
+        else: groups[status].append(entry_text)
 
-    out = ["*How to read it: 🎯 = how far price is from the target area "
-           "(Retail area on longs, Wholesale area on shorts). 🛑 = how far price is from the stop.*"]
+    out = [
+        f"*FTMO example: ${FTMO_BALANCE:,.0f} account · {RISK_PERCENT_LOW:.0%}–{RISK_PERCENT_HIGH:.1%} risk per call (${RISK_DOLLARS_LOW:,.0f}–${RISK_DOLLARS_HIGH:,.0f} at the stop). "
+        "P/L is estimated from entry, current price, and stop; quotes may be delayed.*"
+    ]
     for key, title in (("stop", "❌ STOPPED OUT"), ("near", f"⚠️ CLOSE TO STOP (under {NEAR:g}%)"),
-                       ("hit", "✅ IN OR PAST THE TARGET AREA"), ("run", "▶️ IN PROGRESS")):
+                       ("hit", "✅ IN OR PAST THE TARGET AREA"), ("profit", "🟢 IN PROFIT"),
+                       ("below", "🔴 BELOW ENTRY"), ("flat", "⚪ AT ENTRY"),
+                       ("missing", "🟡 ENTRY NOT ON RECORD")):
         if groups[key]:
             out.append(f"\n__{title}__")
             out.append("\n\n".join(groups[key]))
