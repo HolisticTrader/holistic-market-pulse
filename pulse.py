@@ -329,6 +329,7 @@ def calls_block():
         f"*FTMO example: ${FTMO_BALANCE:,.0f} account · {RISK_PERCENT_LOW:.0%}–{RISK_PERCENT_HIGH:.1%} risk per call (${RISK_DOLLARS_LOW:,.0f}–${RISK_DOLLARS_HIGH:,.0f} at the stop). "
         "P/L is estimated from entry, current price, and stop; quotes may be delayed.*"
     ]
+    score_line = f"🟡 **OVERALL OPEN-CALL SCORE · unavailable** · no calls have both a recorded entry and valid stop ({missing_score_calls} unscored)"
     if scored_calls:
         net_low = min(total_pnl_low, total_pnl_high)
         net_high = max(total_pnl_low, total_pnl_high)
@@ -337,14 +338,10 @@ def calls_block():
         score_color = 0x39FF14 if net_low > 0 else 0xFF1744 if net_high < 0 else 0xD4AF37
         fmt_dollars = lambda amount: f"+${amount:,.0f}" if amount > 0 else f"−${abs(amount):,.0f}" if amount < 0 else "$0"
         fmt_percent = lambda amount: f"+{amount:.2f}%" if amount > 0 else f"−{abs(amount):.2f}%" if amount < 0 else "0.00%"
-        score = (f"{icon} **OVERALL OPEN-CALL SCORE · {fmt_percent(low_pct)} to {fmt_percent(high_pct)}** "
-                 f"({fmt_dollars(net_low)} to {fmt_dollars(net_high)}) · {scored_calls} calls with valid entry/stop")
+        score_line = (f"{icon} **OVERALL OPEN-CALL SCORE · {fmt_percent(low_pct)} to {fmt_percent(high_pct)}** "
+                      f"({fmt_dollars(net_low)} to {fmt_dollars(net_high)}) · {scored_calls} calls with valid entry/stop")
         if missing_score_calls:
-            score += f" · {missing_score_calls} unscored (entry/stop missing)"
-        out.insert(0, score)
-    else:
-        out.insert(0, f"🟡 **OVERALL OPEN-CALL SCORE · unavailable** · no calls have both a recorded entry and valid stop ({missing_score_calls} unscored)")
-    return "\\n".join(out), score_color
+            score_line += f" · {missing_score_calls} unscored (entry/stop missing)"
     for key, title in (("stop", "❌ STOPPED OUT"), ("near", f"⚠️ CLOSE TO STOP (under {NEAR:g}%)"),
                        ("hit", "✅ IN OR PAST THE TARGET AREA"), ("profit", "🟢 IN PROFIT"),
                        ("below", "🔴 BELOW ENTRY"), ("flat", "⚪ AT ENTRY"),
@@ -352,7 +349,8 @@ def calls_block():
         if groups[key]:
             out.append(f"\n__{title}__")
             out.append("\n\n".join(groups[key]))
-    return "\n".join(out)
+    out.insert(1, score_line)
+    return "\n".join(out), score_color
 
 def now_ct():
     # Central Time label without external tz libs: use zoneinfo when available.
