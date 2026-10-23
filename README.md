@@ -23,6 +23,9 @@ Posts to your Discord #general through the "Holistic Market Pulse" webhook. Runs
 - Update your open calls in the `CALLS` list at the top of `pulse.py`.
 - Keep the webhook link secret. To revoke, delete the webhook in Discord.
 
+## Open-call profit estimate
+Each active call shows its entry, current quote, and direction-aware status: **IN PROFIT** or **BELOW ENTRY**. The illustrative sizing model uses a **$100,000 FTMO account** and **1%–1.5% risk per trade** ($1,000–$1,500 at the stop). Estimated P/L scales that risk by the current move from entry relative to the stop distance. Entry ranges use their midpoint; calls without a recorded entry or valid stop do not receive a made-up dollar estimate. Fees and swaps are excluded, and Yahoo Finance quotes may be delayed.
+
 ## Auto-tracking new calls
 The board's "On our calls" section also reads new calls from **#trade-alert** (needs `DISCORD_BOT_TOKEN`) and from your **Substack feed** (no setup). Write calls in this format so the bot can read them:
 
