@@ -1,0 +1,42 @@
+name: Trade Format Feedback Post
+on:
+  push:
+    paths:
+      - "trade_format_feedback.trigger"
+permissions:
+  contents: read
+jobs:
+  post-feedback:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Post updated format and ask for feedback
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: |
+          python - <<'PY'
+          import json, os, urllib.request
+          url = os.environ["DISCORD_WEBHOOK_URL"].rstrip("/") + "?wait=true"
+          payload = {
+              "username": "Holistic Market Pulse",
+              "allowed_mentions": {"parse": []},
+              "content": "**📊 We’ve updated the trade call format — what do you think?**",
+              "embeds": [{
+                  "title": "Open call status · $100k FTMO example",
+                  "description": (
+                      "**Risk model:** 1%–1.5% per trade ($1,000–$1,500 at the stop)\n"
+                      "Calls show direction, entry, current price, movement, status, and estimated P/L range.\n\n"
+                      "🟢 **IN PROFIT** · EUR/USD long · +19 pips · est. **+$950 to +$1,425**\n"
+                      "🔴 **BELOW ENTRY** · GBP/USD short · −15.5 pips · est. **−$465 to −$310**\n\n"
+                      "*Illustrative examples to show the format, not live trade calls. Estimates use entry-to-stop risk; fees and swaps excluded.*"
+                  ),
+                  "color": 13938487,
+                  "footer": {"text": "Would you like us to use this format? Reply 👍 or 👎, or tell us what you’d change."}
+              }]
+          }
+          req = urllib.request.Request(url, data=json.dumps(payload).encode(), method="POST",
+                                       headers={"Content-Type": "application/json"})
+          with urllib.request.urlopen(req, timeout=20) as response:
+              result = json.load(response)
+              print("Posted Discord message ID:", result.get("id"))
+          PY
