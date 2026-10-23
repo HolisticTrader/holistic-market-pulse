@@ -115,7 +115,9 @@ def build():
     for name, sym, side, tgt, inv in calls[:12]:
         p, chg = pulse.quote(sym)
         if p is None: continue
-        watch.append(f"`{name:<7}` {p:.5g}  ({chg:+.2f}% 1W) · {side}" + (f" · T {tgt:g}" if tgt else "") + (f" · stop {inv:g}" if inv else ""))
+        tl = tgt if isinstance(tgt, list) else ([tgt] if tgt else [])
+        tx = " / ".join(f"{t[0]:g}–{t[1]:g}" if isinstance(t, tuple) else f"{t:g}" for t in tl)
+        watch.append(f"`{name:<7}` {p:.5g}  ({chg:+.2f}% 1W) · {side}" + (f" · T {tx}" if tx else "") + (f" · stop {inv:g}" if inv is not None else ""))
     embeds.append({"title": "👀 Watchlist (our open calls)", "description": ("\n".join(watch) or "No open calls.") + "\n-# Prices: Yahoo Finance, may be delayed.", "color": 0x2ECC71})
 
     warn = []
