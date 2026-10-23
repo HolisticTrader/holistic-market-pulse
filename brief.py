@@ -105,7 +105,7 @@ def build():
     embeds.append({"title": "📰 Currency headlines (last 24h)", "description": ("\n".join(news) or "No headlines pulled this morning.")[:4000]
                    + "\n-# Headlines via Google News. Open the link to read the original source.", "color": 0x3498DB})
 
-    hot = trending()
+    hot = []  # Tony's rule: no StockTwits or Reddit sources
     if hot:
         embeds.append({"title": "🔥 What traders are talking about", "description": "\n\n".join(hot)[:4000]
                        + "\n-# Social chatter isn't analysis. Use it to see what the crowd is watching, not what to trade.", "color": 0xE67E22})
@@ -150,4 +150,12 @@ def main():
     urllib.request.urlopen(req, timeout=20).read(); print("brief posted")
 
 if __name__ == "__main__":
-    main()
+    import sys, traceback, urllib.error
+    try:
+        main()
+    except urllib.error.HTTPError as e:
+        body = e.read().decode("utf-8", "replace")[:400].replace("\n", " ")
+        print(f"::error::Brief post failed: HTTP {e.code} {body}"); sys.exit(1)
+    except Exception as e:
+        tb = traceback.format_exc().replace("\n", " | ")[-600:]
+        print(f"::error::Brief failed: {tb}"); sys.exit(1)
