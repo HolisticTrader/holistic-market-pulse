@@ -1,0 +1,41 @@
+name: Announce FTMO tracking account
+on:
+  push:
+    paths:
+      - "tracking_account_announcement.trigger"
+permissions:
+  contents: read
+jobs:
+  announce:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Post Discord announcement
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
+        run: |
+          python - <<'PY'
+          import json, os, urllib.request
+          hook = os.environ["DISCORD_WEBHOOK_URL"].rstrip("/")
+          req = urllib.request.Request(hook, headers={"User-Agent": "HolisticMarketPulse/1.0"})
+          with urllib.request.urlopen(req, timeout=20) as response:
+              channel_id = json.load(response)["channel_id"]
+          payload = {
+              "content": (
+                  "@everyone 📢 **Tracking account update:** the **$100,000 FTMO account is our tracking account** for the calls board.\n\n"
+                  "Each call will show direction, entry/current price, movement, **IN PROFIT** or **BELOW ENTRY**, and estimated P/L using **1%–1.5% risk** ($1,000–$1,500 at the stop). The overall percentage score sums only calls with a recorded entry and valid stop.\n\n"
+                  "Calls without a recorded entry or valid stop will be marked as missing and left out of the score. The board estimates from call details and market quotes; it does not read a live FTMO balance or broker positions."
+              ),
+              "allowed_mentions": {"parse": ["everyone"]}
+          }
+          token = os.environ["DISCORD_BOT_TOKEN"].strip()
+          req = urllib.request.Request(
+              f"https://discord.com/api/v10/channels/{channel_id}/messages",
+              data=json.dumps(payload).encode(), method="POST",
+              headers={"Authorization": f"Bot {token}", "Content-Type": "application/json",
+                       "User-Agent": "DiscordBot (https://github.com/HolisticTrader/holistic-market-pulse, 1.0)"})
+          with urllib.request.urlopen(req, timeout=20) as response:
+              message = json.load(response)
+          print("Posted announcement message ID:", message.get("id"))
+          PY
