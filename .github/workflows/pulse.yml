@@ -15,11 +15,6 @@ permissions:
 concurrency:
   group: holistic-market-pulse
   cancel-in-progress: false
-permissions:
-  contents: write
-concurrency:
-  group: holistic-market-pulse
-  cancel-in-progress: false
 jobs:
   run:
     runs-on: ubuntu-24.04
@@ -64,14 +59,4 @@ jobs:
               git commit -m "Update open-call tracker state"
               git push origin HEAD:${GITHUB_REF_NAME}
             fi
-          fi
-      - name: Persist open-call ledger
-        if: always() && steps.g.outputs.go == 'true'
-        run: |
-          if [ -f trade_calls_state.json ] && ! git diff --quiet -- trade_calls_state.json; then
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add trade_calls_state.json
-            git commit -m "Update open-call tracker state"
-            git push origin HEAD
           fi
