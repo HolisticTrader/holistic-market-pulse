@@ -465,11 +465,11 @@ def build(kind):
     # Forex / crypto / stocks % change tables removed (Tony, Oct 21). Only the open calls show.
     calls_text, calls_color = calls_block()
     embeds = [
-        {"title": "🐂 HOLISTIC TRADERS · $100K EXAMPLE SCORE", "description": (calls_text or "No open calls.")[:4000], "color": calls_color},
+        {"title": "🐂 HOLISTIC TRADERS · $100K EXAMPLE SCORE", "url": "https://holistictrader.github.io/holistic-market-pulse/#tracker", "description": (calls_text or "No open calls.")[:4000], "color": calls_color},
     ]
     content = head
     if kind == "board":
-        content += "\n💬 **Quick feedback:** Does this $100K example sizing and trade-by-trade status make the tracker clearer? Reply with 👍 or tell us what to improve."
+        content += "\n📊 **Full-size tracker tab:** https://holistictrader.github.io/holistic-market-pulse/#tracker\n💬 **Quick feedback:** Does this $100K example sizing and trade-by-trade status make the tracker clearer? Reply with 👍 or tell us what to improve."
     if kind == "pulse":
         m = movers(FX + CRYPTO + STOCKS)
         q = random.choice(QUESTIONS)
