@@ -117,6 +117,7 @@ import re, html
 TRADE_ALERT_CHANNEL = os.environ.get("TRADE_ALERT_CHANNEL_ID", "1546270988100960297")
 SUBSTACK_FEED = os.environ.get("SUBSTACK_FEED", "https://immaculatetonyeth.substack.com/feed")
 TRADER_NAME = os.environ.get("TRADER_NAME", "immaculatetony").lower()
+CALL_LEDGER_PATH = "trade_calls_state.json"
 CCY = {"USD","EUR","GBP","JPY","AUD","NZD","CAD","CHF","ZAR","MXN","NOK","SEK","DKK","SGD","HKD","TRY","PLN","CNH","HUF","CZK"}
 CRYPTO_SYMS = {"BTC","ETH","SOL","XRP","ADA","DOGE","AVAX","LINK","DOT","LTC","BNB","MATIC","SUI"}
 NUM = r"(\d+(?:,\d{3})*(?:\.\d+)?)"
@@ -220,17 +221,50 @@ def substack_texts():
     return out
 
 def all_calls():
-    calls = {c[1]: c for c in CALLS}
-    dates = {}
+    """Merge recent public posts into the persistent active-call ledger."""
+    try:
+        with open(CALL_LEDGER_PATH, encoding="utf-8") as f:
+            state = json.load(f)
+        initialized = bool(state.get("initialized"))
+    except (OSError, ValueError):
+        state, initialized = {}, False
+
+    calls, dates = {}, {}
+    if initialized:
+        for sym, record in state.get("calls", {}).items():
+            try:
+                calls[sym] = tuple(record["call"])
+                dates[sym] = record.get("entry_date")
+            except (KeyError, TypeError):
+                continue
+    else:
+        calls = {c[1]: c for c in CALLS}
+
     feed = sorted(substack_texts() + discord_alert_texts(), key=lambda x: x[0])
     for timestamp, text in feed:
         for action, val in parse_calls(text, timestamp[:10] if timestamp else None):
             if action == "close":
-                calls.pop(yahoo_symbol(val)[0], None)
+                sym = yahoo_symbol(val)[0]
+                calls.pop(sym, None)
+                dates.pop(sym, None)
             else:
-                calls[val[1]] = val[:6]
-                dates[val[1]] = val[6]
-    return [(*c, dates.get(sym)) for sym, c in calls.items()]
+                call = val[:6]
+                calls[call[1]] = call
+                dates[call[1]] = val[6]
+
+    state = {
+        "initialized": True,
+        "calls": {
+            sym: {"call": list(call), "entry_date": dates.get(sym)}
+            for sym, call in calls.items()
+        },
+    }
+    tmp = CALL_LEDGER_PATH + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(state, f, indent=2)
+        f.write("\n")
+    os.replace(tmp, CALL_LEDGER_PATH)
+    return [(*call, dates.get(sym)) for sym, call in calls.items()]
 
 def _zone(t):
     """(low, high, label) for a target area or a single level."""
