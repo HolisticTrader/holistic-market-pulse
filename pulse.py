@@ -139,11 +139,11 @@ def parse_calls(text):
     Also 'Closed $USDJPY' removes a call. Returns list of (action, tuple)."""
     out = []
     text = html.unescape(re.sub(r"<[^>]+>", "\n", text))
-    for m in re.finditer(r"(?i)\b(closed|close|exit(?:ed)?|out of|stopped out of|invalidated)\s*:?\s*$([A-Za-z/]{3,10})", text):
+    for m in re.finditer(r"(?i)\b(closed|close|exit(?:ed)?|out of|stopped out of|invalidated)\s*:?\s*\$([A-Za-z/]{3,10})", text):
         out.append(("close", m.group(2)))
     # split into chunks starting at each $TICKER
-    for chunk in re.split(r"(?=$[A-Za-z][A-Za-z/]{2,9}\b)", text):
-        m = re.match(r"$([A-Za-z/]{3,10})", chunk)
+    for chunk in re.split(r"(?=\$[A-Za-z][A-Za-z/]{2,9}\b)", text):
+        m = re.match(r"\$([A-Za-z/]{3,10})", chunk)
         if not m: continue
         chunk = chunk[:600]
         d = re.search(r"(?i)\b(long|short|buy|sell|bullish|bearish)\b", chunk)
