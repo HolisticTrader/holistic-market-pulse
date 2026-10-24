@@ -1,1 +1,1 @@
-2026-10-23T19:23 CT — refresh FTMO $100K example call tracker
+2026-10-23T19:25 CT — verify dated call ingestion
