@@ -133,15 +133,29 @@ def yahoo_symbol(t):
 
 def _f(x): return float(x.replace(",", ""))
 
-def parse_calls(text):
-    """Find trade cards like:
-    $USDJPY (Weekly) - Long | Entry: 155-156 | Target: T1 160 | Invalid: weekly close below 153.5
-    Also 'Closed $USDJPY' removes a call. Returns list of (action, tuple)."""
+def _entry_date(text, fallback_date=None):
+    """Use a trade date printed in the call, otherwise the source post date."""
+    m = re.search(r"(?i)\b(?:entry|trade)\s+date\s*[:\-]\s*(\d{4}-\d{1,2}-\d{1,2}|\d{1,2}/\d{1,2}/\d{4})", text)
+    if m:
+        raw = m.group(1)
+        try:
+            return (datetime.datetime.strptime(raw, "%Y-%m-%d") if "-" in raw
+                    else datetime.datetime.strptime(raw, "%m/%d/%Y")).date().isoformat()
+        except ValueError:
+            pass
+    if fallback_date:
+        try:
+            return datetime.date.fromisoformat(fallback_date[:10]).isoformat()
+        except ValueError:
+            pass
+    return None
+
+def parse_calls(text, fallback_date=None):
+    """Find trade cards and close notices, keeping the trade entry date."""
     out = []
     text = html.unescape(re.sub(r"<[^>]+>", "\n", text))
     for m in re.finditer(r"(?i)\b(closed|close|exit(?:ed)?|out of|stopped out of|invalidated)\s*:?\s*\$([A-Za-z/]{3,10})", text):
         out.append(("close", m.group(2)))
-    # split into chunks starting at each $TICKER
     for chunk in re.split(r"(?=\$[A-Za-z][A-Za-z/]{2,9}\b)", text):
         m = re.match(r"\$([A-Za-z/]{3,10})", chunk)
         if not m: continue
@@ -162,7 +176,8 @@ def parse_calls(text):
         if tg:
             a = _f(tg.group(1)); b = _f(tg.group(2)) if tg.group(2) else None
             tgt = [(min(a, b), max(a, b)) if b else a]
-        out.append(("open", (name, sym, side, entry, tgt, _f(iv.group(1)) if iv else None)))
+        out.append(("open", (name, sym, side, entry, tgt, _f(iv.group(1)) if iv else None,
+                              _entry_date(chunk, fallback_date))))
     return out
 
 def _get(url, headers=None):
@@ -206,14 +221,16 @@ def substack_texts():
 
 def all_calls():
     calls = {c[1]: c for c in CALLS}
+    dates = {}
     feed = sorted(substack_texts() + discord_alert_texts(), key=lambda x: x[0])
-    for _, text in feed:
-        for action, val in parse_calls(text):
+    for timestamp, text in feed:
+        for action, val in parse_calls(text, timestamp[:10] if timestamp else None):
             if action == "close":
                 calls.pop(yahoo_symbol(val)[0], None)
             else:
-                calls[val[1]] = val
-    return list(calls.values())
+                calls[val[1]] = val[:6]
+                dates[val[1]] = val[6]
+    return [(*c, dates.get(sym)) for sym, c in calls.items()]
 
 def _zone(t):
     """(low, high, label) for a target area or a single level."""
@@ -240,7 +257,7 @@ RISK_DOLLARS_HIGH = FTMO_BALANCE * RISK_PERCENT_HIGH
 
 def calls_block():
     rows = []
-    for name, sym, side, entry, tgts, inv in all_calls()[-12:]:  # newest 12 to stay under Discord's limits
+    for name, sym, side, entry, tgts, inv, entry_date in all_calls()[-12:]:  # newest 12 to stay under Discord's limits
         p, _ = quote(sym)
         if p is None:
             continue
@@ -260,7 +277,13 @@ def calls_block():
     for name, side, entry, entry_value, tgts, inv, p, room in rows:
         arrow = "📈 Long" if side == "long" else "📉 Short"
         area = "Retail" if side == "long" else "Wholesale"
-        lines = [f"**{name}** · {arrow} · current **{_px(p)}**"]
+        date_text = entry_date or "Not recorded"
+        try:
+            month_year = datetime.date.fromisoformat(date_text).strftime("%B / %Y")
+        except ValueError:
+            month_year = "Not recorded"
+        lines = [f"**{name}** · {arrow} · current **{_px(p)}**",
+                 f"🗓️ Entry date: **{date_text}** · Month / year: **{month_year}**"]
         if entry_value is None:
             missing_score_calls += 1
             lines.append("📍 Entry: **not on record** · P/L unavailable")
