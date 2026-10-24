@@ -112,7 +112,7 @@ def movers(rows):
     return sorted(out, key=lambda x: abs(x[1]), reverse=True)
 
 
-# ---------- Auto-tracked calls from #trade-alert and Substack ----------
+# ---------- Auto-tracked calls from Discord #trade-alert ----------
 import re, html
 TRADE_ALERT_CHANNEL = os.environ.get("TRADE_ALERT_CHANNEL_ID", "1546270988100960297")
 TRADER_NAME = os.environ.get("TRADER_NAME", "immaculatetony").lower()
@@ -221,10 +221,10 @@ def discord_alert_texts():
                 embed_text.extend(x for x in (field.get("name"), field.get("value")) if x)
         body = m.get("content", "") + "\n" + "\n".join(embed_text)
         has_symbol = any(_is_signal_symbol(x) for x in re.findall(r"(?i)\$?([A-Za-z]{3}/?[A-Za-z]{3,4}|GOLD|SILVER)\b", body))
-        has_direction = bool(re.search(r"(?i)\\b(long|short|buy|sell|bullish|bearish)\\b", body))
-        has_entry = bool(re.search(r"(?i)\\b(entry|entered|fill(?:ed)?)\\b", body))
-        has_target = bool(re.search(r"(?i)\\b(target|tp|t1)\\b", body))
-        has_stop = bool(re.search(r"(?i)\\b(invalid(?:ation)?|stop(?:\\s*loss)?|sl|wrong)\\b", body))
+        has_direction = bool(re.search(r"(?i)\b(long|short|buy|sell|bullish|bearish)\b", body))
+        has_entry = bool(re.search(r"(?i)\b(entry|entered|fill(?:ed)?)\b", body))
+        has_target = bool(re.search(r"(?i)\b(target|tp|t1)\b", body))
+        has_stop = bool(re.search(r"(?i)\b(invalid(?:ation)?|stop(?:\s*loss)?|sl|wrong)\b", body))
         for key, present in (("symbol", has_symbol), ("direction", has_direction), ("entry", has_entry),
                              ("target", has_target), ("stop", has_stop),
                              ("trade_like", has_symbol and has_direction and (has_target or has_stop))):
