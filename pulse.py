@@ -117,6 +117,7 @@ import re, html
 TRADE_ALERT_CHANNEL = os.environ.get("TRADE_ALERT_CHANNEL_ID", "1546270988100960297")
 SUBSTACK_FEED = os.environ.get("SUBSTACK_FEED", "https://immaculatetonyeth.substack.com/feed")
 TRADER_NAME = os.environ.get("TRADER_NAME", "immaculatetony").lower()
+CALL_LEDGER_PATH = "trade_calls_state.json"
 CCY = {"USD","EUR","GBP","JPY","AUD","NZD","CAD","CHF","ZAR","MXN","NOK","SEK","DKK","SGD","HKD","TRY","PLN","CNH","HUF","CZK"}
 CRYPTO_SYMS = {"BTC","ETH","SOL","XRP","ADA","DOGE","AVAX","LINK","DOT","LTC","BNB","MATIC","SUI"}
 NUM = r"(\d+(?:,\d{3})*(?:\.\d+)?)"
@@ -133,17 +134,31 @@ def yahoo_symbol(t):
 
 def _f(x): return float(x.replace(",", ""))
 
-def parse_calls(text):
-    """Find trade cards like:
-    $USDJPY (Weekly) - Long | Entry: 155-156 | Target: T1 160 | Invalid: weekly close below 153.5
-    Also 'Closed $USDJPY' removes a call. Returns list of (action, tuple)."""
+def _entry_date(text, fallback_date=None):
+    """Use a trade date printed in the call, otherwise the source post date."""
+    m = re.search(r"(?i)\b(?:entry|trade)\s+date\s*[:\-]\s*(\d{4}-\d{1,2}-\d{1,2}|\d{1,2}/\d{1,2}/\d{4})", text)
+    if m:
+        raw = m.group(1)
+        try:
+            return (datetime.datetime.strptime(raw, "%Y-%m-%d") if "-" in raw
+                    else datetime.datetime.strptime(raw, "%m/%d/%Y")).date().isoformat()
+        except ValueError:
+            pass
+    if fallback_date:
+        try:
+            return datetime.date.fromisoformat(fallback_date[:10]).isoformat()
+        except ValueError:
+            pass
+    return None
+
+def parse_calls(text, fallback_date=None):
+    """Find trade cards and close notices, keeping the trade entry date."""
     out = []
     text = html.unescape(re.sub(r"<[^>]+>", "\n", text))
-    for m in re.finditer(r"(?i)\b(closed|close|exit(?:ed)?|out of|stopped out of|invalidated)\s*:?\s*$([A-Za-z/]{3,10})", text):
+    for m in re.finditer(r"(?i)\b(closed|close|exit(?:ed)?|out of|stopped out of|invalidated)\s*:?\s*\$([A-Za-z/]{3,10})", text):
         out.append(("close", m.group(2)))
-    # split into chunks starting at each $TICKER
-    for chunk in re.split(r"(?=$[A-Za-z][A-Za-z/]{2,9}\b)", text):
-        m = re.match(r"$([A-Za-z/]{3,10})", chunk)
+    for chunk in re.split(r"(?=\$[A-Za-z][A-Za-z/]{2,9}\b)", text):
+        m = re.match(r"\$([A-Za-z/]{3,10})", chunk)
         if not m: continue
         chunk = chunk[:600]
         d = re.search(r"(?i)\b(long|short|buy|sell|bullish|bearish)\b", chunk)
@@ -162,7 +177,8 @@ def parse_calls(text):
         if tg:
             a = _f(tg.group(1)); b = _f(tg.group(2)) if tg.group(2) else None
             tgt = [(min(a, b), max(a, b)) if b else a]
-        out.append(("open", (name, sym, side, entry, tgt, _f(iv.group(1)) if iv else None)))
+        out.append(("open", (name, sym, side, entry, tgt, _f(iv.group(1)) if iv else None,
+                              _entry_date(chunk, fallback_date))))
     return out
 
 def _get(url, headers=None):
@@ -188,10 +204,27 @@ def discord_alert_texts():
     return texts
 
 def substack_texts():
+    """Read recent Substack posts via RSS, falling back to its public archive API."""
     try:
         xml = _get(SUBSTACK_FEED)
-    except Exception as e:
-        print("substack read failed:", e); return []
+    except Exception as rss_error:
+        parsed = urllib.parse.urlparse(SUBSTACK_FEED)
+        api = f"{parsed.scheme or 'https'}://{parsed.netloc}/api/v1/archive?sort=new&search=&offset=0&limit=15"
+        try:
+            posts = json.loads(_get(api, {"Accept": "application/json"}))
+            out = []
+            for post in posts[:15]:
+                date = post.get("post_date") or post.get("published_at") or ""
+                try:
+                    ts = datetime.datetime.fromisoformat(date.replace("Z", "+00:00")).isoformat()
+                except Exception:
+                    ts = ""
+                body = post.get("body_html") or post.get("description") or post.get("title") or ""
+                out.append((ts, str(body)[:20000]))
+            return out
+        except Exception as api_error:
+            print("substack read failed (RSS and archive API):", rss_error, api_error)
+            return []
     items = re.findall(r"<item>(.*?)</item>", xml, re.S)[:15]
     out = []
     for it in items:
@@ -205,15 +238,50 @@ def substack_texts():
     return out
 
 def all_calls():
-    calls = {c[1]: c for c in CALLS}
+    """Merge recent public posts into the persistent active-call ledger."""
+    try:
+        with open(CALL_LEDGER_PATH, encoding="utf-8") as f:
+            state = json.load(f)
+        initialized = bool(state.get("initialized"))
+    except (OSError, ValueError):
+        state, initialized = {}, False
+
+    calls, dates = {}, {}
+    if initialized:
+        for sym, record in state.get("calls", {}).items():
+            try:
+                calls[sym] = tuple(record["call"])
+                dates[sym] = record.get("entry_date")
+            except (KeyError, TypeError):
+                continue
+    else:
+        calls = {c[1]: c for c in CALLS}
+
     feed = sorted(substack_texts() + discord_alert_texts(), key=lambda x: x[0])
-    for _, text in feed:
-        for action, val in parse_calls(text):
+    for timestamp, text in feed:
+        for action, val in parse_calls(text, timestamp[:10] if timestamp else None):
             if action == "close":
-                calls.pop(yahoo_symbol(val)[0], None)
+                sym = yahoo_symbol(val)[0]
+                calls.pop(sym, None)
+                dates.pop(sym, None)
             else:
-                calls[val[1]] = val
-    return list(calls.values())
+                call = val[:6]
+                calls[call[1]] = call
+                dates[call[1]] = val[6]
+
+    state = {
+        "initialized": True,
+        "calls": {
+            sym: {"call": list(call), "entry_date": dates.get(sym)}
+            for sym, call in calls.items()
+        },
+    }
+    tmp = CALL_LEDGER_PATH + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(state, f, indent=2)
+        f.write("\n")
+    os.replace(tmp, CALL_LEDGER_PATH)
+    return [(*call, dates.get(sym)) for sym, call in calls.items()]
 
 def _zone(t):
     """(low, high, label) for a target area or a single level."""
@@ -240,7 +308,7 @@ RISK_DOLLARS_HIGH = FTMO_BALANCE * RISK_PERCENT_HIGH
 
 def calls_block():
     rows = []
-    for name, sym, side, entry, tgts, inv in all_calls()[-12:]:  # newest 12 to stay under Discord's limits
+    for name, sym, side, entry, tgts, inv, entry_date in all_calls()[-12:]:  # newest 12 to stay under Discord's limits
         p, _ = quote(sym)
         if p is None:
             continue
@@ -260,7 +328,13 @@ def calls_block():
     for name, side, entry, entry_value, tgts, inv, p, room in rows:
         arrow = "📈 Long" if side == "long" else "📉 Short"
         area = "Retail" if side == "long" else "Wholesale"
-        lines = [f"**{name}** · {arrow} · current **{_px(p)}**"]
+        date_text = entry_date or "Not recorded"
+        try:
+            month_year = datetime.date.fromisoformat(date_text).strftime("%B / %Y")
+        except ValueError:
+            month_year = "Not recorded"
+        lines = [f"**{name}** · {arrow} · current **{_px(p)}**",
+                 f"🗓️ Entry date: **{date_text}** · Month / year: **{month_year}**"]
         if entry_value is None:
             missing_score_calls += 1
             lines.append("📍 Entry: **not on record** · P/L unavailable")
@@ -326,7 +400,7 @@ def calls_block():
 
     score_color = 0xD4AF37
     out = [
-        f"*Tracking account: FTMO ${FTMO_BALANCE:,.0f} · {RISK_PERCENT_LOW:.0%}–{RISK_PERCENT_HIGH:.1%} risk per call (${RISK_DOLLARS_LOW:,.0f}–${RISK_DOLLARS_HIGH:,.0f} at the stop). "
+        f"*Example sizing: FTMO ${FTMO_BALANCE:,.0f} · {RISK_PERCENT_LOW:.0%}–{RISK_PERCENT_HIGH:.1%} risk per call (${RISK_DOLLARS_LOW:,.0f}–${RISK_DOLLARS_HIGH:,.0f} at the stop). "
         "P/L is estimated from entry, current price, and stop; quotes may be delayed.*"
     ]
     score_line = f"🟡 **OVERALL OPEN-CALL SCORE · unavailable** · no calls have both a recorded entry and valid stop ({missing_score_calls} unscored)"

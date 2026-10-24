@@ -10,6 +10,11 @@ on:
       mode:
         description: "board or pulse"
         default: "pulse"
+permissions:
+  contents: write
+concurrency:
+  group: holistic-market-pulse
+  cancel-in-progress: false
 jobs:
   run:
     runs-on: ubuntu-24.04
@@ -42,4 +47,17 @@ jobs:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
           DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
           BOARD_MESSAGE_ID: ${{ vars.BOARD_MESSAGE_ID || '1560756485061873665' }}
+          SUBSTACK_FEED: ${{ vars.SUBSTACK_FEED || 'https://immaculatetonyeth.substack.com/feed' }}
         run: python pulse.py ${{ steps.m.outputs.mode }}
+      - name: Persist open-call ledger
+        if: always() && steps.g.outputs.go == 'true'
+        run: |
+          if [ -f trade_calls_state.json ]; then
+            git add trade_calls_state.json
+            if ! git diff --cached --quiet; then
+              git config user.name "github-actions[bot]"
+              git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+              git commit -m "Update open-call tracker state"
+              git push origin HEAD:${GITHUB_REF_NAME}
+            fi
+          fi
