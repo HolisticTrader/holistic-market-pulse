@@ -465,7 +465,7 @@ def build(kind):
     # Forex / crypto / stocks % change tables removed (Tony, Oct 21). Only the open calls show.
     calls_text, calls_color = calls_block()
     embeds = [
-        {"title": "🎯 OUR OPEN CALLS", "description": (calls_text or "No open calls.")[:4000], "color": calls_color},
+        {"title": "🐂 HOLISTIC TRADERS · $100K EXAMPLE SCORE", "description": (calls_text or "No open calls.")[:4000], "color": calls_color},
     ]
     content = head
     if kind == "board":
