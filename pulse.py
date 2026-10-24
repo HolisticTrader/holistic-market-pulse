@@ -151,15 +151,24 @@ def _entry_date(text, fallback_date=None):
             pass
     return None
 
+def _is_signal_symbol(token):
+    raw = token.upper().replace("/", "").replace("$", "")
+    if len(raw) == 6 and raw[:3] in CCY and raw[3:] in CCY: return True
+    if raw in ("XAUUSD", "XAGUSD", "GOLD", "SILVER"): return True
+    base = raw[:-4] if raw.endswith("USDT") else raw[:-3] if raw.endswith("USD") else raw
+    return raw in CRYPTO_SYMS or base in CRYPTO_SYMS
+
 def parse_calls(text, fallback_date=None):
-    """Find trade cards and close notices, keeping the trade entry date."""
+    """Parse trade cards with or without a leading dollar sign."""
     out = []
     text = html.unescape(re.sub(r"<[^>]+>", "\n", text))
-    for m in re.finditer(r"(?i)\b(closed|close|exit(?:ed)?|out of|stopped out of|invalidated)\s*:?\s*\$([A-Za-z/]{3,10})", text):
-        out.append(("close", m.group(2)))
-    for chunk in re.split(r"(?=\$[A-Za-z][A-Za-z/]{2,9}\b)", text):
-        m = re.match(r"\$([A-Za-z/]{3,10})", chunk)
-        if not m: continue
+    symbol_pattern = r"(?i)(?<![A-Za-z])\$?([A-Za-z]{3}/?[A-Za-z]{3,4}|GOLD|SILVER)\b"
+    for m in re.finditer(r"(?i)\b(closed|close|exit(?:ed)?|out of|stopped out of|invalidated)\s*:?\s*\$?([A-Za-z]{3}/?[A-Za-z]{3,4}|GOLD|SILVER)\b", text):
+        if _is_signal_symbol(m.group(2)):
+            out.append(("close", m.group(2)))
+    symbols = [m for m in re.finditer(symbol_pattern, text) if _is_signal_symbol(m.group(1))]
+    for i, m in enumerate(symbols):
+        chunk = text[m.start():(symbols[i + 1].start() if i + 1 < len(symbols) else len(text))]
         chunk = chunk[:600]
         d = re.search(r"(?i)\b(long|short|buy|sell|bullish|bearish)\b", chunk)
         en = re.search(r"(?i)\b(?:entry|entered|fill(?:ed)?)\b[^\n]{0,30}?(?<![A-Za-z\d.,])" + NUM + r"(?:\s*(?:-|–|—|to)\s*" + NUM + ")?", chunk)
