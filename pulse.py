@@ -343,7 +343,8 @@ def calls_block():
         month_heading = month_date.strftime("%B %Y") if month_date else "Month not recorded"
         month_short = month_date.strftime("%b") if month_date else "Not recorded"
         lines = [f"**{name}** · {arrow} · current **{_px(p)}**",
-                 f"🗓️ Entry month: **{month_short}**"]
+                 f"🗓️ Entry month: **{month_short}**",
+                 f"📊 $100K example risk: **${RISK_DOLLARS_LOW:,.0f}–${RISK_DOLLARS_HIGH:,.0f}** (1%–1.5%)"]
         if entry_value is None:
             missing_score_calls += 1
             lines.append("📍 Entry: **not on record** · P/L unavailable")
@@ -413,8 +414,9 @@ def calls_block():
 
     score_color = 0xD4AF37
     out = [
-        f"*Example sizing: FTMO ${FTMO_BALANCE:,.0f} · {RISK_PERCENT_LOW:.0%}–{RISK_PERCENT_HIGH:.1%} risk per call (${RISK_DOLLARS_LOW:,.0f}–${RISK_DOLLARS_HIGH:,.0f} at the stop). "
-        "P/L is estimated from entry, current price, and stop; quotes may be delayed.*"
+        f"*FTMO ${FTMO_BALANCE:,.0f} example: {RISK_PERCENT_LOW:.0%}–{RISK_PERCENT_HIGH:.1%} risk per call (${RISK_DOLLARS_LOW:,.0f}–${RISK_DOLLARS_HIGH:,.0f} at the stop). "
+        f"For {len(rows)} active calls, that is ${len(rows)*RISK_DOLLARS_LOW:,.0f}–${len(rows)*RISK_DOLLARS_HIGH:,.0f} only if all are open at the same time and each uses full risk. "
+        "P/L uses recorded entry/current price/stop; quotes may be delayed.*"
     ]
     score_line = f"🟡 **OVERALL OPEN-CALL SCORE · unavailable** · no calls have both a recorded entry and valid stop ({missing_score_calls} unscored)"
     if scored_calls:
