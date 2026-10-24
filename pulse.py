@@ -115,7 +115,6 @@ def movers(rows):
 # ---------- Auto-tracked calls from #trade-alert and Substack ----------
 import re, html
 TRADE_ALERT_CHANNEL = os.environ.get("TRADE_ALERT_CHANNEL_ID", "1546270988100960297")
-SUBSTACK_FEED = os.environ.get("SUBSTACK_FEED", "https://immaculatetonyeth.substack.com/feed")
 TRADER_NAME = os.environ.get("TRADER_NAME", "immaculatetony").lower()
 CALL_LEDGER_PATH = "trade_calls_state.json"
 CCY = {"USD","EUR","GBP","JPY","AUD","NZD","CAD","CHF","ZAR","MXN","NOK","SEK","DKK","SGD","HKD","TRY","PLN","CNH","HUF","CZK"}
@@ -206,11 +205,15 @@ def discord_alert_texts():
     except Exception as e:
         print("discord read failed:", e); return []
     texts = []
+    attachments = image_attachments = embed_images = 0
     indicators = {"symbol": 0, "direction": 0, "entry": 0, "target": 0, "stop": 0, "trade_like": 0}
     for m in reversed(msgs):  # oldest first, so newer posts override
         a = m.get("author", {})
         who = (a.get("username", "") + " " + (a.get("global_name") or "")).lower()
         if a.get("bot") or TRADER_NAME not in who: continue
+        attachments += len(m.get("attachments", []))
+        image_attachments += sum(1 for x in m.get("attachments", []) if str(x.get("content_type", "")).startswith("image/") or str(x.get("filename", "")).lower().endswith((".png", ".jpg", ".jpeg", ".webp", ".gif")))
+        embed_images += sum(1 for e in m.get("embeds", []) if e.get("image") or e.get("thumbnail"))
         embed_text = []
         for embed in m.get("embeds", []):
             embed_text.extend(x for x in (embed.get("title"), embed.get("description")) if x)
@@ -229,41 +232,9 @@ def discord_alert_texts():
         texts.append((m.get("timestamp", ""), body))
     print(f"Discord trade source: fetched {len(msgs)} messages; matched {len(texts)} authored by {TRADER_NAME}.")
     print("Trade-like message indicators: " + ", ".join(f"{k}={v}" for k, v in indicators.items()))
+    print(f"Discord attachments: {attachments} total, {image_attachments} image files, {embed_images} embed images.")
     return texts
 
-def substack_texts():
-    """Read recent Substack posts via RSS, falling back to its public archive API."""
-    try:
-        xml = _get(SUBSTACK_FEED)
-    except Exception as rss_error:
-        parsed = urllib.parse.urlparse(SUBSTACK_FEED)
-        api = f"{parsed.scheme or 'https'}://{parsed.netloc}/api/v1/archive?sort=new&search=&offset=0&limit=15"
-        try:
-            posts = json.loads(_get(api, {"Accept": "application/json"}))
-            out = []
-            for post in posts[:15]:
-                date = post.get("post_date") or post.get("published_at") or ""
-                try:
-                    ts = datetime.datetime.fromisoformat(date.replace("Z", "+00:00")).isoformat()
-                except Exception:
-                    ts = ""
-                body = post.get("body_html") or post.get("description") or post.get("title") or ""
-                out.append((ts, str(body)[:20000]))
-            return out
-        except Exception as api_error:
-            print("substack read failed (RSS and archive API):", rss_error, api_error)
-            return []
-    items = re.findall(r"<item>(.*?)</item>", xml, re.S)[:15]
-    out = []
-    for it in items:
-        date = (re.search(r"<pubDate>(.*?)</pubDate>", it) or [None, ""])[1]
-        body = (re.search(r"<content:encoded><!\[CDATA\[(.*?)\]\]></content:encoded>", it, re.S) or [None, ""])[1]
-        try:
-            ts = datetime.datetime.strptime(date.strip(), "%a, %d %b %Y %H:%M:%S %Z").isoformat()
-        except Exception:
-            ts = ""
-        out.append((ts, body[:20000]))
-    return out
 
 def all_calls():
     """Merge recent public posts into the persistent active-call ledger."""
@@ -285,7 +256,7 @@ def all_calls():
     else:
         calls = {c[1]: c for c in CALLS}
 
-    feed = sorted(substack_texts() + discord_alert_texts(), key=lambda x: x[0])
+    feed = sorted(discord_alert_texts(), key=lambda x: x[0])
     parsed_open = parsed_close = 0
     for timestamp, text in feed:
         for action, val in parse_calls(text, timestamp[:10] if timestamp else None):
