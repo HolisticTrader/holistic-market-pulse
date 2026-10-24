@@ -1,0 +1,142 @@
+{
+  "initialized": true,
+  "calls": {
+    "GBPJPY=X": {
+      "call": [
+        "GBP/JPY",
+        "GBPJPY=X",
+        "short",
+        null,
+        [
+          184.4
+        ],
+        220.32
+      ],
+      "entry_date": null
+    },
+    "AUDJPY=X": {
+      "call": [
+        "AUD/JPY",
+        "AUDJPY=X",
+        "short",
+        null,
+        [
+          [
+            100.0,
+            110.0
+          ],
+          [
+            88.0,
+            95.0
+          ]
+        ],
+        113.0
+      ],
+      "entry_date": null
+    },
+    "CHFJPY=X": {
+      "call": [
+        "CHF/JPY",
+        "CHFJPY=X",
+        "long",
+        null,
+        [
+          204.0
+        ],
+        null
+      ],
+      "entry_date": null
+    },
+    "USDMXN=X": {
+      "call": [
+        "USD/MXN",
+        "USDMXN=X",
+        "long",
+        null,
+        [
+          18.8,
+          21.0
+        ],
+        17.5
+      ],
+      "entry_date": null
+    },
+    "USDNOK=X": {
+      "call": [
+        "USD/NOK",
+        "USDNOK=X",
+        "long",
+        null,
+        [
+          10.62
+        ],
+        9.07
+      ],
+      "entry_date": null
+    },
+    "AUDUSD=X": {
+      "call": [
+        "AUD/USD",
+        "AUDUSD=X",
+        "short",
+        null,
+        [],
+        0.7421
+      ],
+      "entry_date": null
+    },
+    "GBPAUD=X": {
+      "call": [
+        "GBP/AUD",
+        "GBPAUD=X",
+        "long",
+        null,
+        [
+          2.046
+        ],
+        1.852
+      ],
+      "entry_date": null
+    },
+    "EURCHF=X": {
+      "call": [
+        "EUR/CHF",
+        "EURCHF=X",
+        "short",
+        null,
+        [],
+        0.9445
+      ],
+      "entry_date": null
+    },
+    "NZDJPY=X": {
+      "call": [
+        "NZD/JPY",
+        "NZDJPY=X",
+        "long",
+        null,
+        [
+          94.99
+        ],
+        86.5
+      ],
+      "entry_date": null
+    },
+    "USDZAR=X": {
+      "call": [
+        "USD/ZAR",
+        "USDZAR=X",
+        "long",
+        null,
+        [
+          [
+            17.0,
+            17.8
+          ]
+        ],
+        15.65
+      ],
+      "entry_date": null
+    }
+  }
+}
