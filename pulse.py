@@ -454,6 +454,8 @@ def build(kind):
         {"title": "🎯 OUR OPEN CALLS", "description": (calls_text or "No open calls.")[:4000], "color": calls_color},
     ]
     content = head
+    if kind == "board":
+        content += "\n💬 **Quick feedback:** Does this $100K example sizing and trade-by-trade status make the tracker clearer? Reply with 👍 or tell us what to improve."
     if kind == "pulse":
         m = movers(FX + CRYPTO + STOCKS)
         q = random.choice(QUESTIONS)
