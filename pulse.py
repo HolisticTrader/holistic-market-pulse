@@ -204,10 +204,27 @@ def discord_alert_texts():
     return texts
 
 def substack_texts():
+    """Read recent Substack posts via RSS, falling back to its public archive API."""
     try:
         xml = _get(SUBSTACK_FEED)
-    except Exception as e:
-        print("substack read failed:", e); return []
+    except Exception as rss_error:
+        parsed = urllib.parse.urlparse(SUBSTACK_FEED)
+        api = f"{parsed.scheme or 'https'}://{parsed.netloc}/api/v1/archive?sort=new&search=&offset=0&limit=15"
+        try:
+            posts = json.loads(_get(api, {"Accept": "application/json"}))
+            out = []
+            for post in posts[:15]:
+                date = post.get("post_date") or post.get("published_at") or ""
+                try:
+                    ts = datetime.datetime.fromisoformat(date.replace("Z", "+00:00")).isoformat()
+                except Exception:
+                    ts = ""
+                body = post.get("body_html") or post.get("description") or post.get("title") or ""
+                out.append((ts, str(body)[:20000]))
+            return out
+        except Exception as api_error:
+            print("substack read failed (RSS and archive API):", rss_error, api_error)
+            return []
     items = re.findall(r"<item>(.*?)</item>", xml, re.S)[:15]
     out = []
     for it in items:
