@@ -188,7 +188,9 @@ def _get(url, headers=None):
 
 def discord_alert_texts():
     tok = os.environ.get("DISCORD_BOT_TOKEN", "").strip()
-    if not tok: return []
+    if not tok:
+        print("Discord trade source unavailable: bot token missing")
+        return []
     try:
         msgs = json.loads(_get(f"https://discord.com/api/v10/channels/{TRADE_ALERT_CHANNEL}/messages?limit=100",
                                {"Authorization": f"Bot {tok}"}))
@@ -201,6 +203,7 @@ def discord_alert_texts():
         if a.get("bot") or TRADER_NAME not in who: continue
         body = m.get("content", "") + "\n" + "\n".join((e.get("description") or "") for e in m.get("embeds", []))
         texts.append((m.get("timestamp", ""), body))
+    print(f"Discord trade source: fetched {len(msgs)} messages; matched {len(texts)} authored by {TRADER_NAME}.")
     return texts
 
 def substack_texts():
@@ -258,13 +261,16 @@ def all_calls():
         calls = {c[1]: c for c in CALLS}
 
     feed = sorted(substack_texts() + discord_alert_texts(), key=lambda x: x[0])
+    parsed_open = parsed_close = 0
     for timestamp, text in feed:
         for action, val in parse_calls(text, timestamp[:10] if timestamp else None):
             if action == "close":
+                parsed_close += 1
                 sym = yahoo_symbol(val)[0]
                 calls.pop(sym, None)
                 dates.pop(sym, None)
             else:
+                parsed_open += 1
                 call = val[:6]
                 calls[call[1]] = call
                 dates[call[1]] = val[6]
@@ -281,6 +287,7 @@ def all_calls():
         json.dump(state, f, indent=2)
         f.write("\n")
     os.replace(tmp, CALL_LEDGER_PATH)
+    print(f"Call importer applied {parsed_open} open/update and {parsed_close} close events; {len(calls)} active calls retained.")
     return [(*call, dates.get(sym)) for sym, call in calls.items()]
 
 def _zone(t):
