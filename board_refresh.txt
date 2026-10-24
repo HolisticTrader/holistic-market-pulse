@@ -1,2 +1,3 @@
 2026-10-23T20:06 CT — apply bull-style $100K Discord score and month grouping
 Tracker tab link added to the #general live board: https://holistictrader.github.io/holistic-market-pulse/#tracker
+Tracker direct link updated: https://holistictrader.github.io/holistic-market-pulse/?tab=tracker
