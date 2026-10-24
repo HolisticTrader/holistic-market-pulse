@@ -42,6 +42,6 @@
 <script>
 const tabs=[...document.querySelectorAll('[role="tab"]')], panels=[...document.querySelectorAll('[role="tabpanel"]')];
 function select(id,updateHash=true){const name=id==="tracker"?"tracker":"overview";tabs.forEach(t=>t.setAttribute('aria-selected',String(t.id===name+'-tab')));panels.forEach(p=>p.hidden=p.id!==name);if(updateHash)history.replaceState(null,"",name==="tracker"?"#tracker":"#overview");}
-tabs.forEach(t=>t.addEventListener('click',()=>select(t.id.replace('-tab',''))));document.querySelectorAll('[data-open]').forEach(a=>a.addEventListener('click',e=>{e.preventDefault();select(a.dataset.open)}));select(location.hash==="#tracker"?"tracker":"overview",false);
+tabs.forEach(t=>t.addEventListener('click',()=>select(t.id.replace('-tab',''))));document.querySelectorAll('[data-open]').forEach(a=>a.addEventListener('click',e=>{e.preventDefault();select(a.dataset.open)}));const initialTracker=location.hash==="#tracker";select(initialTracker?"tracker":"overview",false);if(initialTracker)window.scrollTo(0,0);
 </script>
 </body></html>
