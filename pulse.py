@@ -319,25 +319,31 @@ def calls_block():
         elif not isinstance(tgts, list): tgts = [tgts]
         entry_value = (sum(entry) / 2) if isinstance(entry, (tuple, list)) else entry
         room = (p - inv) / p * 100 * (1 if side == "long" else -1) if inv is not None else None
-        rows.append((name, side, entry, entry_value, tgts, inv, p, room))
+        rows.append((name, side, entry, entry_value, tgts, inv, p, room, entry_date))
     rows.sort(key=lambda r: r[7] if r[7] is not None else float("inf"))
     if not rows:
         return "", 0xD4AF37
 
     NEAR = 3.0  # % from stop that counts as "close to stop"
-    groups = {"stop": [], "near": [], "hit": [], "profit": [], "below": [], "flat": [], "missing": []}
+    monthly_groups = {}
+    status_order = (("stop", "❌ STOPPED OUT"), ("near", f"⚠️ CLOSE TO STOP (under {NEAR:g}%)"),
+                    ("hit", "✅ IN OR PAST THE TARGET AREA"), ("profit", "🟢 IN PROFIT"),
+                    ("below", "🔴 BELOW ENTRY"), ("flat", "⚪ AT ENTRY"),
+                    ("missing", "🟡 ENTRY NOT ON RECORD"))
     total_pnl_low = total_pnl_high = 0.0
     scored_calls = missing_score_calls = 0
-    for name, side, entry, entry_value, tgts, inv, p, room in rows:
+    for name, side, entry, entry_value, tgts, inv, p, room, entry_date in rows:
         arrow = "📈 Long" if side == "long" else "📉 Short"
         area = "Retail" if side == "long" else "Wholesale"
-        date_text = entry_date or "Not recorded"
         try:
-            month_year = datetime.date.fromisoformat(date_text).strftime("%B / %Y")
+            month_date = datetime.date.fromisoformat(entry_date) if entry_date else None
         except ValueError:
-            month_year = "Not recorded"
+            month_date = None
+        month_key = (month_date.year, month_date.month) if month_date else (0, 0)
+        month_heading = month_date.strftime("%B %Y") if month_date else "Month not recorded"
+        month_short = month_date.strftime("%b") if month_date else "Not recorded"
         lines = [f"**{name}** · {arrow} · current **{_px(p)}**",
-                 f"🗓️ Entry date: **{date_text}** · Month / year: **{month_year}**"]
+                 f"🗓️ Entry month: **{month_short}**"]
         if entry_value is None:
             missing_score_calls += 1
             lines.append("📍 Entry: **not on record** · P/L unavailable")
@@ -396,10 +402,14 @@ def calls_block():
         else:
             lines.append(f"🛑 Stop {_px(inv)}: {room:.1f}% away")
         entry_text = "\n".join(lines)
-        if room is not None and room <= 0: groups["stop"].append(entry_text)
-        elif room is not None and room < NEAR: groups["near"].append(entry_text)
-        elif t1_hit: groups["hit"].append(entry_text)
-        else: groups[status].append(entry_text)
+        bucket = monthly_groups.setdefault(month_key, {
+            "heading": month_heading,
+            "groups": {key: [] for key, _ in status_order},
+        })
+        if room is not None and room <= 0: bucket["groups"]["stop"].append(entry_text)
+        elif room is not None and room < NEAR: bucket["groups"]["near"].append(entry_text)
+        elif t1_hit: bucket["groups"]["hit"].append(entry_text)
+        else: bucket["groups"][status].append(entry_text)
 
     score_color = 0xD4AF37
     out = [
@@ -419,14 +429,18 @@ def calls_block():
                       f"({fmt_dollars(net_low)} to {fmt_dollars(net_high)}) · {scored_calls} calls with valid entry/stop")
         if missing_score_calls:
             score_line += f" · {missing_score_calls} unscored (entry/stop missing)"
-    for key, title in (("stop", "❌ STOPPED OUT"), ("near", f"⚠️ CLOSE TO STOP (under {NEAR:g}%)"),
-                       ("hit", "✅ IN OR PAST THE TARGET AREA"), ("profit", "🟢 IN PROFIT"),
-                       ("below", "🔴 BELOW ENTRY"), ("flat", "⚪ AT ENTRY"),
-                       ("missing", "🟡 ENTRY NOT ON RECORD")):
-        if groups[key]:
-            out.append(f"\n__{title}__")
-            out.append("\n\n".join(groups[key]))
+    month_summary = []
+    for month_key, bucket in sorted(monthly_groups.items(), key=lambda item: item[0], reverse=True):
+        trades_in_month = sum(len(items) for items in bucket["groups"].values())
+        month_summary.append(f"{bucket['heading']} · {trades_in_month}")
+        out.append(f"\n__📅 {bucket['heading'].upper()} · {trades_in_month} TRADES__")
+        for key, title in status_order:
+            if bucket["groups"][key]:
+                out.append(f"*{title}*")
+                out.append("\n\n".join(bucket["groups"][key]))
     out.insert(1, score_line)
+    if month_summary:
+        out.insert(2, "📆 **BY ENTRY MONTH:** " + " · ".join(month_summary))
     return "\n".join(out), score_color
 
 def now_ct():
