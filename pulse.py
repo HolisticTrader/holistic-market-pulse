@@ -383,7 +383,7 @@ def calls_block():
 
     score_color = 0xD4AF37
     out = [
-        f"*Tracking account: FTMO ${FTMO_BALANCE:,.0f} · {RISK_PERCENT_LOW:.0%}–{RISK_PERCENT_HIGH:.1%} risk per call (${RISK_DOLLARS_LOW:,.0f}–${RISK_DOLLARS_HIGH:,.0f} at the stop). "
+        f"*Example sizing: FTMO ${FTMO_BALANCE:,.0f} · {RISK_PERCENT_LOW:.0%}–{RISK_PERCENT_HIGH:.1%} risk per call (${RISK_DOLLARS_LOW:,.0f}–${RISK_DOLLARS_HIGH:,.0f} at the stop). "
         "P/L is estimated from entry, current price, and stop; quotes may be delayed.*"
     ]
     score_line = f"🟡 **OVERALL OPEN-CALL SCORE · unavailable** · no calls have both a recorded entry and valid stop ({missing_score_calls} unscored)"
