@@ -212,7 +212,7 @@ def discord_alert_texts():
         who = (a.get("username", "") + " " + (a.get("global_name") or "")).lower()
         if a.get("bot") or TRADER_NAME not in who: continue
         body = m.get("content", "") + "\n" + "\n".join((e.get("description") or "") for e in m.get("embeds", []))
-        has_symbol = any(_is_signal_symbol(x) for x in re.findall(r"(?i)\\$?([A-Za-z]{3}/?[A-Za-z]{3,4}|GOLD|SILVER)\\b", body))
+        has_symbol = any(_is_signal_symbol(x) for x in re.findall(r"(?i)\$?([A-Za-z]{3}/?[A-Za-z]{3,4}|GOLD|SILVER)\b", body))
         has_direction = bool(re.search(r"(?i)\\b(long|short|buy|sell|bullish|bearish)\\b", body))
         has_entry = bool(re.search(r"(?i)\\b(entry|entered|fill(?:ed)?)\\b", body))
         has_target = bool(re.search(r"(?i)\\b(target|tp|t1)\\b", body))
