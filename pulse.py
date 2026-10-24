@@ -206,13 +206,24 @@ def discord_alert_texts():
     except Exception as e:
         print("discord read failed:", e); return []
     texts = []
+    indicators = {"symbol": 0, "direction": 0, "entry": 0, "target": 0, "stop": 0, "trade_like": 0}
     for m in reversed(msgs):  # oldest first, so newer posts override
         a = m.get("author", {})
         who = (a.get("username", "") + " " + (a.get("global_name") or "")).lower()
         if a.get("bot") or TRADER_NAME not in who: continue
         body = m.get("content", "") + "\n" + "\n".join((e.get("description") or "") for e in m.get("embeds", []))
+        has_symbol = any(_is_signal_symbol(x) for x in re.findall(r"(?i)\\$?([A-Za-z]{3}/?[A-Za-z]{3,4}|GOLD|SILVER)\\b", body))
+        has_direction = bool(re.search(r"(?i)\\b(long|short|buy|sell|bullish|bearish)\\b", body))
+        has_entry = bool(re.search(r"(?i)\\b(entry|entered|fill(?:ed)?)\\b", body))
+        has_target = bool(re.search(r"(?i)\\b(target|tp|t1)\\b", body))
+        has_stop = bool(re.search(r"(?i)\\b(invalid(?:ation)?|stop(?:\\s*loss)?|sl|wrong)\\b", body))
+        for key, present in (("symbol", has_symbol), ("direction", has_direction), ("entry", has_entry),
+                             ("target", has_target), ("stop", has_stop),
+                             ("trade_like", has_symbol and has_direction and (has_target or has_stop))):
+            indicators[key] += int(present)
         texts.append((m.get("timestamp", ""), body))
     print(f"Discord trade source: fetched {len(msgs)} messages; matched {len(texts)} authored by {TRADER_NAME}.")
+    print("Trade-like message indicators: " + ", ".join(f"{k}={v}" for k, v in indicators.items()))
     return texts
 
 def substack_texts():
