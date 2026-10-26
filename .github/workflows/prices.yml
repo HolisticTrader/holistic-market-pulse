@@ -1,0 +1,31 @@
+name: Board prices
+on:
+  schedule:
+    - cron: "23 * * * 0-5"   # hourly, Sun-Fri (UTC)
+  push:
+    paths: ["board/symbols.txt"]
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: board-prices
+  cancel-in-progress: true
+jobs:
+  run:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - run: python board/prices.py
+      - name: Save
+        run: |
+          git add board/prices.json
+          if ! git diff --cached --quiet; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git commit -m "Board prices [skip ci]"
+            for i in 1 2 3; do git pull --rebase -q origin "${GITHUB_REF_NAME}" && git push origin HEAD:"${GITHUB_REF_NAME}" && break; sleep 5; done
+          fi
