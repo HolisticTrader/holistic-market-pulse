@@ -1,0 +1,102 @@
+{
+ "updated": "2026-10-26T00:29:53+00:00",
+ "source": "Yahoo Finance (may be delayed)",
+ "prices": [
+  {
+   "pair": "GBP/JPY",
+   "symbol": "GBPJPY=X",
+   "price": 210.19,
+   "at": "2026-10-26T00:29:51+00:00"
+  },
+  {
+   "pair": "AUD/JPY",
+   "symbol": "AUDJPY=X",
+   "price": 110.462,
+   "at": "2026-10-26T00:29:52+00:00"
+  },
+  {
+   "pair": "USD/MXN",
+   "symbol": "USDMXN=X",
+   "price": 18.6873,
+   "at": "2026-10-26T00:29:52+00:00"
+  },
+  {
+   "pair": "GBP/AUD",
+   "symbol": "GBPAUD=X",
+   "price": 1.9027,
+   "at": "2026-10-26T00:29:51+00:00"
+  },
+  {
+   "pair": "NZD/JPY",
+   "symbol": "NZDJPY=X",
+   "price": 89.517,
+   "at": "2026-10-26T00:29:51+00:00"
+  },
+  {
+   "pair": "AUD/USD",
+   "symbol": "AUDUSD=X",
+   "price": 0.7032,
+   "at": "2026-10-26T00:28:44+00:00"
+  },
+  {
+   "pair": "EUR/CHF",
+   "symbol": "EURCHF=X",
+   "price": 0.9251,
+   "at": "2026-10-26T00:29:51+00:00"
+  },
+  {
+   "pair": "CHF/JPY",
+   "symbol": "CHFJPY=X",
+   "price": 190.527,
+   "at": "2026-10-26T00:29:51+00:00"
+  },
+  {
+   "pair": "AUD/CAD",
+   "symbol": "AUDCAD=X",
+   "price": 0.985,
+   "at": "2026-10-26T00:29:52+00:00"
+  },
+  {
+   "pair": "NZD/USD",
+   "symbol": "NZDUSD=X",
+   "price": 0.5699,
+   "at": "2026-10-26T00:28:44+00:00"
+  },
+  {
+   "pair": "ZAR/JPY",
+   "symbol": "ZARJPY=X",
+   "price": 9.436,
+   "at": "2026-10-26T00:29:42+00:00"
+  },
+  {
+   "pair": "USD/CAD",
+   "symbol": "USDCAD=X",
+   "price": 1.4014,
+   "at": "2026-10-26T00:29:51+00:00"
+  },
+  {
+   "pair": "USD/ZAR",
+   "symbol": "USDZAR=X",
+   "price": 16.6161,
+   "at": "2026-10-26T00:29:51+00:00"
+  },
+  {
+   "pair": "USD/NOK",
+   "symbol": "USDNOK=X",
+   "price": 9.3205,
+   "at": "2026-10-26T00:29:53+00:00"
+  },
+  {
+   "pair": "ORCL",
+   "symbol": "ORCL",
+   "price": 126.16,
+   "at": "2026-10-23T20:02:48+00:00"
+  },
+  {
+   "pair": "PEP",
+   "symbol": "PEP",
+   "price": 135.77,
+   "at": "2026-10-23T20:00:00+00:00"
+  }
+ ]
+}
