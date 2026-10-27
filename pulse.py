@@ -492,6 +492,11 @@ def main():
     if kind == "crypto":
         print("Weekend crypto check retired with the % change tables: nothing to post.")
         return
+    # Pause switch (Tony, Oct 26 2026): while PAUSE_SCORE exists, the $100K Example Score
+    # is not posted or refreshed in Discord. Delete PAUSE_SCORE to turn it back on.
+    if os.path.exists(os.path.join(os.path.dirname(os.path.abspath(__file__)), "PAUSE_SCORE")):
+        print(f"PAUSE_SCORE is set: skipping '{kind}' (100K Example Score paused).")
+        return
     hook = os.environ["DISCORD_WEBHOOK_URL"].rstrip("/")
     content, embeds = build(kind)
     payload = {"content": content, "embeds": embeds, "username": "Holistic Market Pulse", "allowed_mentions": {"parse": []}}
