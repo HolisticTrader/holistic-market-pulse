@@ -14,8 +14,9 @@ Thresholds: stocks/forex 1.5, crypto 3.
 
 Mechanical levels (confirm on chart):
   entry = weekly close; stop = nearest weekly swing pivot (2 bars each side) at least
-  MIN_GAP% away (stocks 5, forex 1.5, crypto 8); T1 = SMA50;
-  T2 = nearest opposite pivot zone at least MIN_GAP% away. R:R from the close.
+  MIN_GAP% away (stocks 5, forex 1.5, crypto 8); T1 = nearest OPPOSING zone (supply for buys,
+  demand for sells) at least MIN_GAP% away; T2 = the next opposing zone. 50-week SMA is context only.
+  R:R from the close to the near edge of the zone.
 Output: scanner/out/<mode>/results.json  (education only)
 """
 import json, os, sys, time, csv, io, datetime, urllib.request, urllib.parse
@@ -111,28 +112,52 @@ def weekly(sym, cls):
 
 
 def levels(side, close, sma, o, h, l, c, piv_lo, piv_hi, g):
-    """Mechanical stop/T1/T2 and R:R for a BUY or SELL at the weekly close."""
-    r = {"stop": None, "t1": sma, "t2": None, "rr_t1": None, "rr_t2": None, "note": ""}
+    """Mechanical stop and targets for a BUY or SELL at the weekly close (Tony: targets are the opposing zones).
+    BUY : stop = nearest weekly swing low at least g below; supply zones = pivot-high candles [body top, high];
+          T1 = near edge of the nearest supply zone at least g above, T2 = the next supply zone above that.
+    SELL: mirror with demand zones = pivot-low candles [low, body bottom]."""
+    r = {"stop": None, "t1": None, "t1_far": None, "t2": None, "t2_far": None, "rr_t1": None, "rr_t2": None, "note": ""}
+
+    def merge(zones, up):
+        zones = sorted(zones, key=lambda z: z[0] if up else -z[1])
+        out = []
+        for z in zones:
+            if out and ((up and z[0] <= out[-1][1]) or (not up and z[1] >= out[-1][0])):
+                out[-1] = (min(out[-1][0], z[0]), max(out[-1][1], z[1]))
+            else:
+                out.append(z)
+        return out
+
     if side == "BUY":
         lows = [l[i] for i in reversed(piv_lo) if l[i] < close * (1 - g)]
-        tops = [min(o[i], c[i]) for i in reversed(piv_hi) if min(o[i], c[i]) > close * (1 + g)]
+        zones = merge([(max(o[i], c[i]), h[i]) for i in piv_hi if max(o[i], c[i]) > close * (1 + g)], True)
         if not lows:
             r["note"] = "no swing low below the min gap (price discovery down)"
             return r
         r["stop"] = lows[0]; risk = close - r["stop"]
-        r["rr_t1"] = round((sma - close) / risk, 2) if sma > close else 0.0
-        if tops:
-            r["t2"] = min(tops); r["rr_t2"] = round((r["t2"] - close) / risk, 2)
+        if not zones:
+            r["note"] = "no supply zone above (price discovery up)"
+            return r
+        r["t1"], r["t1_far"] = zones[0]
+        r["rr_t1"] = round((r["t1"] - close) / risk, 2)
+        if len(zones) > 1:
+            r["t2"], r["t2_far"] = zones[1]
+            r["rr_t2"] = round((r["t2"] - close) / risk, 2)
     else:
         highs = [h[i] for i in reversed(piv_hi) if h[i] > close * (1 + g)]
-        bots = [max(o[i], c[i]) for i in reversed(piv_lo) if max(o[i], c[i]) < close * (1 - g)]
+        zones = merge([(l[i], min(o[i], c[i])) for i in piv_lo if min(o[i], c[i]) < close * (1 - g)], False)
         if not highs:
             r["note"] = "no swing high above the min gap (price discovery up)"
             return r
         r["stop"] = highs[0]; risk = r["stop"] - close
-        r["rr_t1"] = round((close - sma) / risk, 2) if sma < close else 0.0
-        if bots:
-            r["t2"] = max(bots); r["rr_t2"] = round((close - r["t2"]) / risk, 2)
+        if not zones:
+            r["note"] = "no demand zone below (price discovery down)"
+            return r
+        r["t1_far"], r["t1"] = zones[0]
+        r["rr_t1"] = round((close - r["t1"]) / risk, 2)
+        if len(zones) > 1:
+            r["t2_far"], r["t2"] = zones[1]
+            r["rr_t2"] = round((close - r["t2"]) / risk, 2)
     return r
 
 
@@ -209,7 +234,7 @@ def analyze(sym, name, cls):
                        "sma": [mult(i)[2] for i in idx], "m": [mult(i)[0] for i in idx]}
         row.update(levels(side, close, sma, o, h, l, c, piv_lo, piv_hi, g))
         row["passes_3to1"] = bool(row["rr_t1"] is not None and row["rr_t1"] >= 3)
-        row["a_grade"] = bool(row["passes_3to1"] and row["rr_t2"] is not None and row["rr_t2"] >= 3)
+        row["a_grade"] = bool(row["rr_t1"] is not None and row["rr_t1"] >= 5)
     return row
 
 
@@ -242,9 +267,18 @@ def chart(r, path):
     if r.get("stop"):
         ax.axhline(r["stop"], color=R, linewidth=0.9, linestyle=":")
         ax.text(x[0], r["stop"], " stop", color=R, fontsize=7, va="bottom")
-    if r.get("t1") and r["state"].endswith("ENDED"):
-        ax.axhline(r["t1"], color=G, linewidth=0.9, linestyle=":")
-        ax.text(x[0], r["t1"], " T1 (SMA)", color=G, fontsize=7, va="bottom")
+    tcol = G if r["side"] == "BUY" else R
+    for lab, a, b in (("T1", r.get("t1"), r.get("t1_far")), ("T2", r.get("t2"), r.get("t2_far"))):
+        if a is not None and b is not None:
+            ax.axhspan(min(a, b), max(a, b), color=tcol, alpha=0.18, linewidth=0)
+            ax.text(x[0], a, f" {lab} zone", color=tcol, fontsize=7, va="bottom")
+    ys = d["l"] + d["h"] + [v for v in (r.get("stop"), r.get("t1"), r.get("t1_far")) if v is not None]
+    span = max(ys) - min(ys)
+    for v in (r.get("t2"), r.get("t2_far")):
+        if v is not None and min(ys) - span * 0.5 <= v <= max(ys) + span * 0.5:
+            ys.append(v)
+    pad = (max(ys) - min(ys)) * 0.06
+    ax.set_ylim(min(ys) - pad, max(ys) + pad)
     if r["state"].endswith("ENDED"):
         ax.axvline(x[-1], color=W, linewidth=0.6, alpha=0.4)
     tick = r["symbol"].replace("=X", "").replace("-USD", "")
