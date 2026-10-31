@@ -25,6 +25,8 @@ ATR_LEN, MA_LEN, PIV, PEAK_WEEKS = 15, 50, 2, 8
 TH = {"stock": 1.5, "forex": 1.5, "crypto": 3.0}
 MIN_GAP = {"stock": 5.0, "forex": 1.5, "crypto": 8.0}
 UA = {"User-Agent": "Mozilla/5.0"}
+SERIES = {}
+RAW = "https://raw.githubusercontent.com/HolisticTrader/holistic-market-pulse/scanner/scanner/"
 NOW = datetime.datetime.now(datetime.timezone.utc)
 
 FX = ["EURUSD", "GBPUSD", "USDJPY", "USDCHF", "AUDUSD", "USDCAD", "NZDUSD",
@@ -200,10 +202,63 @@ def analyze(sym, name, cls):
            "peak_8w": round(min(window) if side == "BUY" else max(window), 2) if side else None,
            "pct_from_sma": round(pct, 2), "atr_pct": round(atrp, 2), "sma50": sma, "state": state, "side": side}
     if side:
+        k = min(80, n - MA_LEN - ATR_LEN)
+        idx = list(range(n - k + 1, n + 1))
+        SERIES[sym] = {"ts": [ts[i] for i in idx], "o": [o[i] for i in idx], "h": [h[i] for i in idx],
+                       "l": [l[i] for i in idx], "c": [c[i] for i in idx],
+                       "sma": [mult(i)[2] for i in idx], "m": [mult(i)[0] for i in idx]}
         row.update(levels(side, close, sma, o, h, l, c, piv_lo, piv_hi, g))
         row["passes_3to1"] = bool(row["rr_t1"] is not None and row["rr_t1"] >= 3)
         row["a_grade"] = bool(row["passes_3to1"] and row["rr_t2"] is not None and row["rr_t2"] >= 3)
     return row
+
+
+def chart(r, path):
+    """Weekly candles, 50-week SMA, dots while the multiple is past the threshold, stop and T1 lines."""
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    d = SERIES.get(r["symbol"])
+    if not d:
+        return False
+    G, R, W, BG = "#39FF14", "#FF3131", "#FFFFFF", "#000000"
+    th = TH[r["class"]]
+    x = list(range(len(d["c"])))
+    fig, ax = plt.subplots(figsize=(6.4, 3.2), dpi=110)
+    fig.patch.set_facecolor(BG); ax.set_facecolor(BG)
+    for i in x:
+        up = d["c"][i] >= d["o"][i]
+        col = G if up else R
+        ax.vlines(i, d["l"][i], d["h"][i], color=col, linewidth=0.8)
+        ax.add_patch(plt.Rectangle((i - 0.3, min(d["o"][i], d["c"][i])), 0.6,
+                                   max(abs(d["c"][i] - d["o"][i]), 1e-12), color=col))
+    ax.plot(x, d["sma"], color="#BBBBBB", linewidth=1.1, linestyle="--", label="50-week SMA")
+    rng = max(d["h"]) - min(d["l"])
+    for i in x:
+        if d["m"][i] <= -th:
+            ax.scatter(i, d["l"][i] - rng * 0.04, s=10, color=G, zorder=3)
+        elif d["m"][i] >= th:
+            ax.scatter(i, d["h"][i] + rng * 0.04, s=10, color=R, zorder=3)
+    if r.get("stop"):
+        ax.axhline(r["stop"], color=R, linewidth=0.9, linestyle=":")
+        ax.text(x[0], r["stop"], " stop", color=R, fontsize=7, va="bottom")
+    if r.get("t1") and r["state"].endswith("ENDED"):
+        ax.axhline(r["t1"], color=G, linewidth=0.9, linestyle=":")
+        ax.text(x[0], r["t1"], " T1 (SMA)", color=G, fontsize=7, va="bottom")
+    if r["state"].endswith("ENDED"):
+        ax.axvline(x[-1], color=W, linewidth=0.6, alpha=0.4)
+    tick = r["symbol"].replace("=X", "").replace("-USD", "")
+    status = "dot ended" if r["state"].endswith("ENDED") else "dot printing"
+    ax.set_title(f"{tick}  ·  weekly  ·  {r['side']} {status}  ·  multiple {r['multiple']}", color=W, fontsize=10, loc="left")
+    ax.text(0.99, 0.02, "Holistic Trader", transform=ax.transAxes, color="#666666", fontsize=7, ha="right")
+    ax.tick_params(colors="#888888", labelsize=7)
+    ax.set_xticks([])
+    for sp in ax.spines.values():
+        sp.set_color("#333333")
+    fig.tight_layout()
+    fig.savefig(path, facecolor=BG)
+    plt.close(fig)
+    return True
 
 
 def main():
@@ -229,6 +284,19 @@ def main():
         }
     out_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "out", mode)
     os.makedirs(out_dir, exist_ok=True)
+    week = max((r["week_of"] for r in ok), default="na")
+    chart_dir = os.path.join(out_dir, "charts", week)
+    os.makedirs(chart_dir, exist_ok=True)
+    picks = list(ended)
+    for v in deep.values():
+        picks += v["buys"][:3] + v["sells"][:3]
+    for r in picks:
+        fn = r["symbol"].replace("=", "_").replace("/", "_") + ".png"
+        try:
+            if chart(r, os.path.join(chart_dir, fn)):
+                r["chart_url"] = f"{RAW}out/{mode}/charts/{week}/{fn}"
+        except Exception as e:
+            print("chart failed", r["symbol"], e, flush=True)
     meta = {"mode": mode, "run_utc": NOW.isoformat(timespec="seconds"), "universe": len(uni), "scanned": len(ok),
             "failed": [r["symbol"] for r in rows if "error" in r],
             "week_of": max((r["week_of"] for r in ok), default=None),
