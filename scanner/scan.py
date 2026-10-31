@@ -23,6 +23,7 @@ import json, os, sys, time, csv, io, datetime, urllib.request, urllib.parse
 from concurrent.futures import ThreadPoolExecutor
 
 ATR_LEN, MA_LEN, PIV, PEAK_WEEKS = 15, 50, 2, 8
+ZPIV = 5  # target zones come from MAJOR swings: 5 weekly bars each side (stops use 2)
 TH = {"stock": 1.5, "forex": 1.5, "crypto": 3.0}
 MIN_GAP = {"stock": 5.0, "forex": 1.5, "crypto": 8.0}
 UA = {"User-Agent": "Mozilla/5.0"}
@@ -111,9 +112,9 @@ def weekly(sym, cls):
     return None
 
 
-def levels(side, close, sma, o, h, l, c, piv_lo, piv_hi, g):
+def levels(side, close, sma, o, h, l, c, piv_lo, piv_hi, g, zlo, zhi):
     """Mechanical stop and targets for a BUY or SELL at the weekly close (Tony: targets are the opposing zones).
-    BUY : stop = nearest weekly swing low at least g below; supply zones = pivot-high candles [body top, high];
+    BUY : stop = nearest weekly swing low at least g below; supply zones = MAJOR pivot-high candles (ZPIV bars each side) [body top, high];
           T1 = near edge of the nearest supply zone at least g above, T2 = the next supply zone above that.
     SELL: mirror with demand zones = pivot-low candles [low, body bottom]."""
     r = {"stop": None, "t1": None, "t1_far": None, "t2": None, "t2_far": None, "rr_t1": None, "rr_t2": None, "note": ""}
@@ -130,7 +131,7 @@ def levels(side, close, sma, o, h, l, c, piv_lo, piv_hi, g):
 
     if side == "BUY":
         lows = [l[i] for i in reversed(piv_lo) if l[i] < close * (1 - g)]
-        zones = merge([(max(o[i], c[i]), h[i]) for i in piv_hi if max(o[i], c[i]) > close * (1 + g)], True)
+        zones = merge([(max(o[i], c[i]), h[i]) for i in zhi if max(o[i], c[i]) > close * (1 + g)], True)
         if not lows:
             r["note"] = "no swing low below the min gap (price discovery down)"
             return r
@@ -145,7 +146,7 @@ def levels(side, close, sma, o, h, l, c, piv_lo, piv_hi, g):
             r["rr_t2"] = round((r["t2"] - close) / risk, 2)
     else:
         highs = [h[i] for i in reversed(piv_hi) if h[i] > close * (1 + g)]
-        zones = merge([(l[i], min(o[i], c[i])) for i in piv_lo if min(o[i], c[i]) < close * (1 - g)], False)
+        zones = merge([(l[i], min(o[i], c[i])) for i in zlo if min(o[i], c[i]) < close * (1 - g)], False)
         if not highs:
             r["note"] = "no swing high above the min gap (price discovery up)"
             return r
@@ -209,6 +210,8 @@ def analyze(sym, name, cls):
     close = c[-1]
     piv_lo = [i for i in range(PIV, len(c) - PIV) if all(l[i] <= l[j] for j in range(i - PIV, i + PIV + 1))]
     piv_hi = [i for i in range(PIV, len(c) - PIV) if all(h[i] >= h[j] for j in range(i - PIV, i + PIV + 1))]
+    zlo = [i for i in range(ZPIV, len(c) - ZPIV) if all(l[i] <= l[j] for j in range(i - ZPIV, i + ZPIV + 1))]
+    zhi = [i for i in range(ZPIV, len(c) - ZPIV) if all(h[i] >= h[j] for j in range(i - ZPIV, i + ZPIV + 1))]
 
     if mprev <= -th and m > -th:
         state, side = "BUY_DOT_ENDED", "BUY"
@@ -232,7 +235,7 @@ def analyze(sym, name, cls):
         SERIES[sym] = {"ts": [ts[i] for i in idx], "o": [o[i] for i in idx], "h": [h[i] for i in idx],
                        "l": [l[i] for i in idx], "c": [c[i] for i in idx],
                        "sma": [mult(i)[2] for i in idx], "m": [mult(i)[0] for i in idx]}
-        row.update(levels(side, close, sma, o, h, l, c, piv_lo, piv_hi, g))
+        row.update(levels(side, close, sma, o, h, l, c, piv_lo, piv_hi, g, zlo, zhi))
         row["passes_3to1"] = bool(row["rr_t1"] is not None and row["rr_t1"] >= 3)
         row["a_grade"] = bool(row["rr_t1"] is not None and row["rr_t1"] >= 5)
     return row
