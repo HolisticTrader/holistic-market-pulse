@@ -75,11 +75,16 @@ def top_crypto():
     return out
 
 
-def week_complete(ts, cls):
+def week_monday(ts):
     start = datetime.datetime.fromtimestamp(ts, datetime.timezone.utc)
     monday = (start - datetime.timedelta(days=start.weekday())).replace(hour=0, minute=0, second=0, microsecond=0)
-    if start.weekday() >= 5:  # timestamp late Sunday UTC for some exchanges -> next Monday
+    if start.weekday() == 6 and start.hour >= 20:  # forex week opens Sunday evening UTC -> belongs to next Monday's week
         monday += datetime.timedelta(days=7)
+    return monday
+
+
+def week_complete(ts, cls):
+    monday = week_monday(ts)
     if cls == "crypto":
         return NOW >= monday + datetime.timedelta(days=7)
     return NOW >= monday + datetime.timedelta(days=4, hours=20)  # after Friday's US close
@@ -168,7 +173,7 @@ def analyze(sym, name, cls):
         state, side = "-", None
 
     row = {"symbol": sym, "name": name, "class": cls,
-           "week_of": datetime.datetime.fromtimestamp(ts[-1], datetime.timezone.utc).strftime("%Y-%m-%d"),
+           "week_of": week_monday(ts[-1]).strftime("%Y-%m-%d"),
            "close": close, "multiple": round(m, 2), "multiple_prev": round(mprev, 2),
            "peak_8w": round(min(window) if side == "BUY" else max(window), 2) if side else None,
            "pct_from_sma": round(pct, 2), "atr_pct": round(atrp, 2), "sma50": sma, "state": state, "side": side}
