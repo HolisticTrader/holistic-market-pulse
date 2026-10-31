@@ -134,8 +134,30 @@ def levels(side, close, sma, o, h, l, c, piv_lo, piv_hi, g):
     return r
 
 
+def yahoo_alias(sym):
+    """Yahoo lists many coins under a numbered symbol (UNI7083-USD). Look it up."""
+    base = sym.split("-")[0]
+    b = get(f"https://query2.finance.yahoo.com/v1/finance/search?q={urllib.parse.quote(base + ' USD')}&quotesCount=10&newsCount=0", 2)
+    if not b:
+        return None
+    try:
+        for q in json.loads(b).get("quotes", []):
+            s = q.get("symbol", "")
+            if q.get("quoteType") == "CRYPTOCURRENCY" and s.endswith("-USD") and s.split("-")[0].rstrip("0123456789") == base:
+                return s
+    except Exception:
+        pass
+    return None
+
+
 def analyze(sym, name, cls):
     bars = weekly(sym, cls)
+    if cls == "crypto" and (not bars or len(bars) < MA_LEN + ATR_LEN + PEAK_WEEKS):
+        alt = yahoo_alias(sym)
+        if alt and alt != sym:
+            alt_bars = weekly(alt, cls)
+            if alt_bars and len(alt_bars) > len(bars or []):
+                sym, bars = alt, alt_bars
     if not bars or len(bars) < MA_LEN + ATR_LEN + PEAK_WEEKS:
         return {"symbol": sym, "name": name, "class": cls, "error": "no data / too short"}
     ts = [b[0] for b in bars]; o = [b[1] for b in bars]; h = [b[2] for b in bars]
