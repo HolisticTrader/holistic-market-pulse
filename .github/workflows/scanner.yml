@@ -1,9 +1,12 @@
-name: Holistic scanner (manual, scanner branch only)
+name: Holistic scanner (scanner branch; mode from scanner/mode.txt)
 on:
   push:
     branches: [scanner]
 permissions:
   contents: write
+concurrency:
+  group: holistic-scanner
+  cancel-in-progress: false
 jobs:
   scan:
     runs-on: ubuntu-24.04
@@ -13,10 +16,10 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
-      - run: python scanner/scan.py
+      - run: python scanner/scan.py "$(head -n1 scanner/mode.txt 2>/dev/null || echo stocks_fx)"
       - name: Save results to scanner branch
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -f scanner/out/
-          git commit -m "Scan results [skip ci]" && git push origin HEAD:scanner
+          git commit -m "Scan results [skip ci]" && for i in 1 2 3; do git pull --rebase -q origin scanner && git push origin HEAD:scanner && break; sleep 5; done
