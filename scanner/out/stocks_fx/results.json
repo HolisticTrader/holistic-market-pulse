@@ -1,7 +1,7 @@
 {
  "meta": {
   "mode": "stocks_fx",
-  "run_utc": "2026-10-31T13:16:47+00:00",
+  "run_utc": "2026-10-31T14:38:20+00:00",
   "universe": 539,
   "scanned": 535,
   "failed": [
@@ -51,7 +51,8 @@
    "rr_t2": 0.44,
    "note": "",
    "passes_3to1": false,
-   "a_grade": false
+   "a_grade": false,
+   "chart_url": "https://raw.githubusercontent.com/HolisticTrader/holistic-market-pulse/scanner/scanner/out/stocks_fx/charts/2026-10-26/DVA.png"
   },
   {
    "symbol": "DOW",
@@ -74,7 +75,8 @@
    "rr_t2": 0.59,
    "note": "",
    "passes_3to1": false,
-   "a_grade": false
+   "a_grade": false,
+   "chart_url": "https://raw.githubusercontent.com/HolisticTrader/holistic-market-pulse/scanner/scanner/out/stocks_fx/charts/2026-10-26/DOW.png"
   },
   {
    "symbol": "INTU",
@@ -97,7 +99,8 @@
    "rr_t2": 0.56,
    "note": "",
    "passes_3to1": false,
-   "a_grade": false
+   "a_grade": false,
+   "chart_url": "https://raw.githubusercontent.com/HolisticTrader/holistic-market-pulse/scanner/scanner/out/stocks_fx/charts/2026-10-26/INTU.png"
   },
   {
    "symbol": "WAB",
@@ -120,7 +123,8 @@
    "rr_t2": 1.21,
    "note": "",
    "passes_3to1": false,
-   "a_grade": false
+   "a_grade": false,
+   "chart_url": "https://raw.githubusercontent.com/HolisticTrader/holistic-market-pulse/scanner/scanner/out/stocks_fx/charts/2026-10-26/WAB.png"
   }
  ],
  "deep_names": {
@@ -147,7 +151,8 @@
      "rr_t2": 0.44,
      "note": "",
      "passes_3to1": false,
-     "a_grade": false
+     "a_grade": false,
+     "chart_url": "https://raw.githubusercontent.com/HolisticTrader/holistic-market-pulse/scanner/scanner/out/stocks_fx/charts/2026-10-26/EURUSD_X.png"
     },
     {
      "symbol": "EURGBP=X",
@@ -170,7 +175,8 @@
      "rr_t2": 0.45,
      "note": "",
      "passes_3to1": false,
-     "a_grade": false
+     "a_grade": false,
+     "chart_url": "https://raw.githubusercontent.com/HolisticTrader/holistic-market-pulse/scanner/scanner/out/stocks_fx/charts/2026-10-26/EURGBP_X.png"
     },
     {
      "symbol": "EURCAD=X",
@@ -193,7 +199,8 @@
      "rr_t2": 1.37,
      "note": "",
      "passes_3to1": false,
-     "a_grade": false
+     "a_grade": false,
+     "chart_url": "https://raw.githubusercontent.com/HolisticTrader/holistic-market-pulse/scanner/scanner/out/stocks_fx/charts/2026-10-26/EURCAD_X.png"
     },
     {
      "symbol": "EURJPY=X",
@@ -379,7 +386,8 @@
      "rr_t2": null,
      "note": "no swing high above the min gap (price discovery up)",
      "passes_3to1": false,
-     "a_grade": false
+     "a_grade": false,
+     "chart_url": "https://raw.githubusercontent.com/HolisticTrader/holistic-market-pulse/scanner/scanner/out/stocks_fx/charts/2026-10-26/USDTRY_X.png"
     },
     {
      "symbol": "USDMXN=X",
@@ -402,7 +410,8 @@
      "rr_t2": 0.58,
      "note": "",
      "passes_3to1": false,
-     "a_grade": false
+     "a_grade": false,
+     "chart_url": "https://raw.githubusercontent.com/HolisticTrader/holistic-market-pulse/scanner/scanner/out/stocks_fx/charts/2026-10-26/USDMXN_X.png"
     },
     {
      "symbol": "GBPCHF=X",
@@ -425,7 +434,8 @@
      "rr_t2": 0.41,
      "note": "",
      "passes_3to1": false,
-     "a_grade": false
+     "a_grade": false,
+     "chart_url": "https://raw.githubusercontent.com/HolisticTrader/holistic-market-pulse/scanner/scanner/out/stocks_fx/charts/2026-10-26/GBPCHF_X.png"
     },
     {
      "symbol": "AUDNZD=X",
@@ -590,7 +600,8 @@
      "rr_t2": 0.33,
      "note": "",
      "passes_3to1": false,
-     "a_grade": false
+     "a_grade": false,
+     "chart_url": "https://raw.githubusercontent.com/HolisticTrader/holistic-market-pulse/scanner/scanner/out/stocks_fx/charts/2026-10-26/ROL.png"
     },
     {
      "symbol": "BSX",
@@ -613,7 +624,8 @@
      "rr_t2": 0.66,
      "note": "",
      "passes_3to1": true,
-     "a_grade": false
+     "a_grade": false,
+     "chart_url": "https://raw.githubusercontent.com/HolisticTrader/holistic-market-pulse/scanner/scanner/out/stocks_fx/charts/2026-10-26/BSX.png"
     },
     {
      "symbol": "LVS",
@@ -636,7 +648,8 @@
      "rr_t2": 1.07,
      "note": "",
      "passes_3to1": true,
-     "a_grade": false
+     "a_grade": false,
+     "chart_url": "https://raw.githubusercontent.com/HolisticTrader/holistic-market-pulse/scanner/scanner/out/stocks_fx/charts/2026-10-26/LVS.png"
     },
     {
      "symbol": "APTV",
@@ -822,7 +835,8 @@
      "rr_t2": 0.87,
      "note": "",
      "passes_3to1": true,
-     "a_grade": false
+     "a_grade": false,
+     "chart_url": "https://raw.githubusercontent.com/HolisticTrader/holistic-market-pulse/scanner/scanner/out/stocks_fx/charts/2026-10-26/MRNA.png"
     },
     {
      "symbol": "CRL",
@@ -845,7 +859,8 @@
      "rr_t2": 1.86,
      "note": "",
      "passes_3to1": true,
-     "a_grade": false
+     "a_grade": false,
+     "chart_url": "https://raw.githubusercontent.com/HolisticTrader/holistic-market-pulse/scanner/scanner/out/stocks_fx/charts/2026-10-26/CRL.png"
     },
     {
      "symbol": "MPC",
@@ -868,7 +883,8 @@
      "rr_t2": 0.52,
      "note": "",
      "passes_3to1": true,
-     "a_grade": false
+     "a_grade": false,
+     "chart_url": "https://raw.githubusercontent.com/HolisticTrader/holistic-market-pulse/scanner/scanner/out/stocks_fx/charts/2026-10-26/MPC.png"
     },
     {
      "symbol": "PSX",
@@ -1548,7 +1564,7 @@
    "multiple_prev": 0.73,
    "peak_8w": null,
    "pct_from_sma": 2.81,
-   "atr_pct": 3.91,
+   "atr_pct": 3.92,
    "sma50": 126.6463998413086,
    "state": "-",
    "side": null
@@ -2433,7 +2449,8 @@
    "rr_t2": 0.66,
    "note": "",
    "passes_3to1": true,
-   "a_grade": false
+   "a_grade": false,
+   "chart_url": "https://raw.githubusercontent.com/HolisticTrader/holistic-market-pulse/scanner/scanner/out/stocks_fx/charts/2026-10-26/BSX.png"
   },
   {
    "symbol": "BMY",
@@ -2880,7 +2897,8 @@
    "rr_t2": 1.86,
    "note": "",
    "passes_3to1": true,
-   "a_grade": false
+   "a_grade": false,
+   "chart_url": "https://raw.githubusercontent.com/HolisticTrader/holistic-market-pulse/scanner/scanner/out/stocks_fx/charts/2026-10-26/CRL.png"
   },
   {
    "symbol": "SCHW",
@@ -2999,7 +3017,7 @@
    "multiple_prev": 2.64,
    "peak_8w": 2.64,
    "pct_from_sma": 11.47,
-   "atr_pct": 4.56,
+   "atr_pct": 4.55,
    "sma50": 96.19599990844726,
    "state": "SELL_DOT_PRINTING",
    "side": "SELL",
@@ -3052,7 +3070,7 @@
    "multiple_prev": 1.88,
    "peak_8w": 1.89,
    "pct_from_sma": 7.83,
-   "atr_pct": 4.14,
+   "atr_pct": 4.15,
    "sma50": 168.03279907226562,
    "state": "SELL_DOT_PRINTING",
    "side": "SELL",
@@ -3295,7 +3313,7 @@
    "multiple_prev": -1.47,
    "peak_8w": -2.58,
    "pct_from_sma": -11.11,
-   "atr_pct": 7.36,
+   "atr_pct": 7.37,
    "sma50": 26.121704177856444,
    "state": "BUY_DOT_PRINTING",
    "side": "BUY",
@@ -3717,7 +3735,8 @@
    "rr_t2": 0.44,
    "note": "",
    "passes_3to1": false,
-   "a_grade": false
+   "a_grade": false,
+   "chart_url": "https://raw.githubusercontent.com/HolisticTrader/holistic-market-pulse/scanner/scanner/out/stocks_fx/charts/2026-10-26/DVA.png"
   },
   {
    "symbol": "DECK",
@@ -4014,7 +4033,8 @@
    "rr_t2": 0.59,
    "note": "",
    "passes_3to1": false,
-   "a_grade": false
+   "a_grade": false,
+   "chart_url": "https://raw.githubusercontent.com/HolisticTrader/holistic-market-pulse/scanner/scanner/out/stocks_fx/charts/2026-10-26/DOW.png"
   },
   {
    "symbol": "DHI",
@@ -5167,11 +5187,11 @@
    "class": "stock",
    "week_of": "2026-10-26",
    "close": 96.83999633789062,
-   "multiple": 3.02,
+   "multiple": 3.03,
    "multiple_prev": 3.38,
    "peak_8w": 3.38,
    "pct_from_sma": 24.58,
-   "atr_pct": 8.12,
+   "atr_pct": 8.11,
    "sma50": 77.73460006713867,
    "state": "SELL_DOT_PRINTING",
    "side": "SELL",
@@ -5858,7 +5878,8 @@
    "rr_t2": 0.56,
    "note": "",
    "passes_3to1": false,
-   "a_grade": false
+   "a_grade": false,
+   "chart_url": "https://raw.githubusercontent.com/HolisticTrader/holistic-market-pulse/scanner/scanner/out/stocks_fx/charts/2026-10-26/INTU.png"
   },
   {
    "symbol": "ISRG",
@@ -6335,7 +6356,8 @@
    "rr_t2": 1.07,
    "note": "",
    "passes_3to1": true,
-   "a_grade": false
+   "a_grade": false,
+   "chart_url": "https://raw.githubusercontent.com/HolisticTrader/holistic-market-pulse/scanner/scanner/out/stocks_fx/charts/2026-10-26/LVS.png"
   },
   {
    "symbol": "LDOS",
@@ -6617,7 +6639,8 @@
    "rr_t2": 0.52,
    "note": "",
    "passes_3to1": true,
-   "a_grade": false
+   "a_grade": false,
+   "chart_url": "https://raw.githubusercontent.com/HolisticTrader/holistic-market-pulse/scanner/scanner/out/stocks_fx/charts/2026-10-26/MPC.png"
   },
   {
    "symbol": "MAR",
@@ -7045,7 +7068,8 @@
    "rr_t2": 0.87,
    "note": "",
    "passes_3to1": true,
-   "a_grade": false
+   "a_grade": false,
+   "chart_url": "https://raw.githubusercontent.com/HolisticTrader/holistic-market-pulse/scanner/scanner/out/stocks_fx/charts/2026-10-26/MRNA.png"
   },
   {
    "symbol": "MDLZ",
@@ -8520,7 +8544,8 @@
    "rr_t2": 0.33,
    "note": "",
    "passes_3to1": false,
-   "a_grade": false
+   "a_grade": false,
+   "chart_url": "https://raw.githubusercontent.com/HolisticTrader/holistic-market-pulse/scanner/scanner/out/stocks_fx/charts/2026-10-26/ROL.png"
   },
   {
    "symbol": "ROP",
@@ -8528,11 +8553,11 @@
    "class": "stock",
    "week_of": "2026-10-26",
    "close": 466.6000061035156,
-   "multiple": 4.11,
+   "multiple": 4.12,
    "multiple_prev": 3.95,
-   "peak_8w": 4.11,
+   "peak_8w": 4.12,
    "pct_from_sma": 22.82,
-   "atr_pct": 5.55,
+   "atr_pct": 5.54,
    "sma50": 379.89860107421873,
    "state": "SELL_DOT_PRINTING",
    "side": "SELL",
@@ -10067,7 +10092,8 @@
    "rr_t2": 1.21,
    "note": "",
    "passes_3to1": false,
-   "a_grade": false
+   "a_grade": false,
+   "chart_url": "https://raw.githubusercontent.com/HolisticTrader/holistic-market-pulse/scanner/scanner/out/stocks_fx/charts/2026-10-26/WAB.png"
   },
   {
    "symbol": "WMT",
@@ -10485,7 +10511,8 @@
    "rr_t2": 0.44,
    "note": "",
    "passes_3to1": false,
-   "a_grade": false
+   "a_grade": false,
+   "chart_url": "https://raw.githubusercontent.com/HolisticTrader/holistic-market-pulse/scanner/scanner/out/stocks_fx/charts/2026-10-26/EURUSD_X.png"
   },
   {
    "symbol": "GBPUSD=X",
@@ -10614,7 +10641,8 @@
    "rr_t2": 0.45,
    "note": "",
    "passes_3to1": false,
-   "a_grade": false
+   "a_grade": false,
+   "chart_url": "https://raw.githubusercontent.com/HolisticTrader/holistic-market-pulse/scanner/scanner/out/stocks_fx/charts/2026-10-26/EURGBP_X.png"
   },
   {
    "symbol": "EURJPY=X",
@@ -10690,7 +10718,8 @@
    "rr_t2": 1.37,
    "note": "",
    "passes_3to1": false,
-   "a_grade": false
+   "a_grade": false,
+   "chart_url": "https://raw.githubusercontent.com/HolisticTrader/holistic-market-pulse/scanner/scanner/out/stocks_fx/charts/2026-10-26/EURCAD_X.png"
   },
   {
    "symbol": "EURNZD=X",
@@ -10743,7 +10772,8 @@
    "rr_t2": 0.41,
    "note": "",
    "passes_3to1": false,
-   "a_grade": false
+   "a_grade": false,
+   "chart_url": "https://raw.githubusercontent.com/HolisticTrader/holistic-market-pulse/scanner/scanner/out/stocks_fx/charts/2026-10-26/GBPCHF_X.png"
   },
   {
    "symbol": "GBPAUD=X",
@@ -11017,7 +11047,8 @@
    "rr_t2": 0.58,
    "note": "",
    "passes_3to1": false,
-   "a_grade": false
+   "a_grade": false,
+   "chart_url": "https://raw.githubusercontent.com/HolisticTrader/holistic-market-pulse/scanner/scanner/out/stocks_fx/charts/2026-10-26/USDMXN_X.png"
   },
   {
    "symbol": "USDZAR=X",
@@ -11101,7 +11132,8 @@
    "rr_t2": null,
    "note": "no swing high above the min gap (price discovery up)",
    "passes_3to1": false,
-   "a_grade": false
+   "a_grade": false,
+   "chart_url": "https://raw.githubusercontent.com/HolisticTrader/holistic-market-pulse/scanner/scanner/out/stocks_fx/charts/2026-10-26/USDTRY_X.png"
   },
   {
    "symbol": "USDSGD=X",
