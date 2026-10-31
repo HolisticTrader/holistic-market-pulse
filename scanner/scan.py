@@ -19,6 +19,7 @@ import json, os, sys, time, csv, io, datetime, urllib.request, urllib.parse
 from concurrent.futures import ThreadPoolExecutor
 
 ATR_LEN, MA_LEN, TH, PIV = 15, 50, 1.5, 2
+MIN_GAP = {"stock": 5.0, "forex": 1.5}  # % : ignore pivots closer than this for stop and T2 (plain %, no ATR)
 UA = {"User-Agent": "Mozilla/5.0"}
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "out")
 os.makedirs(OUT, exist_ok=True)
@@ -89,15 +90,16 @@ def analyze(sym, name, cls):
     # pivots on completed structure (exclude last PIV bars)
     piv_lo = [i for i in range(PIV, len(c) - PIV) if all(l[i] <= l[j] for j in range(i - PIV, i + PIV + 1))]
     piv_hi = [i for i in range(PIV, len(c) - PIV) if all(h[i] >= h[j] for j in range(i - PIV, i + PIV + 1))]
+    g = MIN_GAP[cls] / 100
     sig = "BUY" if m <= -TH else "SELL" if m >= TH else "-"
     row = {"symbol": sym, "name": name, "class": cls, "date": datetime.datetime.utcfromtimestamp(ts[-1]).strftime("%Y-%m-%d"),
            "close": close, "multiple": round(m, 2), "multiple_prev": round(mprev, 2), "pct_from_sma": round(pct, 2),
            "sma50": sma, "signal": sig, "stop": None, "t1": None, "t2": None, "rr_t1": None, "rr_t2": None, "note": ""}
     if sig == "BUY":
-        lows = [l[i] for i in reversed(piv_lo) if l[i] < close]
-        highs = [min(o[i], c[i]) for i in reversed(piv_hi) if min(o[i], c[i]) > close]
+        lows = [l[i] for i in reversed(piv_lo) if l[i] < close * (1 - g)]
+        highs = [min(o[i], c[i]) for i in reversed(piv_hi) if min(o[i], c[i]) > close * (1 + g)]
         if not lows:
-            row["note"] = "no pivot low below price (price discovery down)"
+            row["note"] = "no pivot low beyond min gap (price discovery down)"
             return row
         stop = lows[0]; risk = close - stop
         row["stop"] = stop; row["t1"] = sma
@@ -106,10 +108,10 @@ def analyze(sym, name, cls):
             t2 = min(highs); row["t2"] = t2
             row["rr_t2"] = round((t2 - close) / risk, 2) if risk > 0 else None
     elif sig == "SELL":
-        highs = [h[i] for i in reversed(piv_hi) if h[i] > close]
-        lows = [max(o[i], c[i]) for i in reversed(piv_lo) if max(o[i], c[i]) < close]
+        highs = [h[i] for i in reversed(piv_hi) if h[i] > close * (1 + g)]
+        lows = [max(o[i], c[i]) for i in reversed(piv_lo) if max(o[i], c[i]) < close * (1 - g)]
         if not highs:
-            row["note"] = "no pivot high above price (price discovery up)"
+            row["note"] = "no pivot high beyond min gap (price discovery up)"
             return row
         stop = highs[0]; risk = stop - close
         row["stop"] = stop; row["t1"] = sma
