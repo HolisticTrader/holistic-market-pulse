@@ -298,6 +298,48 @@ def chart(r, path):
     return True
 
 
+WATCH_DEFAULT = ["SPY|SPY", "QQQ|QQQ", "DXY|DX-Y.NYB", "GOLD|GC=F"]
+
+
+def watch_bars(out_dir):
+    """Weekly OHLC for Tony's board calls + index/macro (scanner/watch.txt: LABEL|YAHOO per line).
+    Uses the current week's bar even if incomplete, so Friday runs see this week's high/low."""
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "watch.txt")
+    lines = list(WATCH_DEFAULT)
+    if os.path.exists(path):
+        lines += [ln.strip() for ln in open(path) if "|" in ln and not ln.strip().startswith("#")]
+    seen, rows = set(), []
+    for ln in lines:
+        label, sym = [x.strip() for x in ln.split("|", 1)]
+        if sym in seen:
+            continue
+        seen.add(sym)
+        row = {"label": label, "symbol": sym}
+        b = None
+        for host in ("query1", "query2"):
+            b = get(f"https://{host}.finance.yahoo.com/v8/finance/chart/{urllib.parse.quote(sym)}?range=3mo&interval=1wk")
+            if b:
+                break
+        try:
+            res = json.loads(b)["chart"]["result"][0]
+            q = res["indicators"]["quote"][0]
+            bars = [(t, o, h, l, c) for t, o, h, l, c in zip(res["timestamp"], q["open"], q["high"], q["low"], q["close"])
+                    if None not in (o, h, l, c)]
+            t, o, h, l, c = bars[-1]
+            prev = bars[-2][4] if len(bars) > 1 else None
+            row.update({"week_of": week_monday(t).date().isoformat(), "open": round(o, 5), "high": round(h, 5),
+                        "low": round(l, 5), "close": round(c, 5), "prev_close": round(prev, 5) if prev else None,
+                        "pct_vs_prev_close": round((c / prev - 1) * 100, 2) if prev else None,
+                        "pct_open_to_close": round((c / o - 1) * 100, 2),
+                        "last_price": res["meta"].get("regularMarketPrice")})
+        except Exception as e:
+            row["error"] = f"couldn't read Yahoo: {type(e).__name__}"
+        rows.append(row)
+    json.dump({"run_utc": NOW.isoformat(timespec="seconds"), "rows": rows},
+              open(os.path.join(out_dir, "watch.json"), "w"), indent=1)
+    print(f"watch {len(rows)} symbols, {sum('error' in r for r in rows)} failed", flush=True)
+
+
 def main():
     mode = (sys.argv[1] if len(sys.argv) > 1 else "stocks_fx").strip()
     if mode == "crypto":
@@ -343,6 +385,10 @@ def main():
                        "sell_printing": sum(r["state"] == "SELL_DOT_PRINTING" for r in ok)}}
     json.dump({"meta": meta, "trades_3to1": trades, "dots_ended_all": ended, "deep_names": deep, "all": ok},
               open(os.path.join(out_dir, "results.json"), "w"), indent=1)
+    try:
+        watch_bars(out_dir)
+    except Exception as e:
+        print("watch failed", e, flush=True)
     print(json.dumps(meta["counts"]), flush=True)
     for r in trades:
         print("TRADE", r["class"], r["symbol"], r["side"], r["peak_8w"], r["rr_t1"], r["rr_t2"])
