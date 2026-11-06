@@ -317,17 +317,28 @@ def watch_bars(out_dir):
         row = {"label": label, "symbol": sym}
         b = None
         for host in ("query1", "query2"):
-            b = get(f"https://{host}.finance.yahoo.com/v8/finance/chart/{urllib.parse.quote(sym)}?range=3mo&interval=1wk")
+            b = get(f"https://{host}.finance.yahoo.com/v8/finance/chart/{urllib.parse.quote(sym)}?range=1mo&interval=1d")
             if b:
                 break
         try:
             res = json.loads(b)["chart"]["result"][0]
             q = res["indicators"]["quote"][0]
-            bars = [(t, o, h, l, c) for t, o, h, l, c in zip(res["timestamp"], q["open"], q["high"], q["low"], q["close"])
+            off = res["meta"].get("gmtoffset", 0) or 0
+            days = [(t + off, o, h, l, c) for t, o, h, l, c in zip(res["timestamp"], q["open"], q["high"], q["low"], q["close"])
                     if None not in (o, h, l, c)]
-            t, o, h, l, c = bars[-1]
-            prev = bars[-2][4] if len(bars) > 1 else None
-            row.update({"week_of": week_monday(t).date().isoformat(), "open": round(o, 5), "high": round(h, 5),
+            weeks = {}
+            for t, o, h, l, c in days:  # group daily bars by Monday-start week (exchange-local time)
+                wk = (datetime.datetime.fromtimestamp(t, datetime.timezone.utc).date()
+                      - datetime.timedelta(days=datetime.datetime.fromtimestamp(t, datetime.timezone.utc).weekday()))
+                w = weeks.setdefault(wk, [o, h, l, c])
+                w[1], w[2], w[3] = max(w[1], h), min(w[2], l), c
+            keys = sorted(weeks)
+            wk = keys[-1]
+            o, h, l, c = weeks[wk]
+            prev = weeks[keys[-2]][3] if len(keys) > 1 else None
+            row.update({"week_of": wk.isoformat(), "days_in_week": sum(
+                1 for t, *_ in days if datetime.datetime.fromtimestamp(t, datetime.timezone.utc).date() >= wk),
+                "open": round(o, 5), "high": round(h, 5),
                         "low": round(l, 5), "close": round(c, 5), "prev_close": round(prev, 5) if prev else None,
                         "pct_vs_prev_close": round((c / prev - 1) * 100, 2) if prev else None,
                         "pct_open_to_close": round((c / o - 1) * 100, 2),
