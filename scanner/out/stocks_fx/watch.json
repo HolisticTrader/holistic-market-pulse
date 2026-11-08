@@ -1,5 +1,5 @@
 {
- "run_utc": "2026-11-07T16:11:42+00:00",
+ "run_utc": "2026-11-08T13:12:32+00:00",
  "rows": [
   {
    "label": "SPY",
@@ -89,14 +89,14 @@
    "label": "USDMXN",
    "symbol": "USDMXN=X",
    "week_of": "2026-11-02",
-   "days_in_week": 5,
+   "days_in_week": 6,
    "open": 18.79369,
    "high": 18.86647,
    "low": 18.52625,
-   "close": 18.78088,
+   "close": 18.5975,
    "prev_close": 18.8521,
-   "pct_vs_prev_close": -0.38,
-   "pct_open_to_close": -0.07,
+   "pct_vs_prev_close": -1.35,
+   "pct_open_to_close": -1.04,
    "last_price": 18.5975
   },
   {
