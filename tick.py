@@ -18,6 +18,10 @@ JOBS = [
     ("trivia",      "trivia.yml",      {"mode": "round"},         "12:00", ALL,      300),
     ("pulse",       "pulse.yml",       {"mode": "pulse"},         "15:15", WEEKDAYS, 180),
     ("leaderboard", "trivia.yml",      {"mode": "leaderboard"},   "21:30", ALL,      150),
+    # Trade Alert Scorecard @everyone posts in #general (Tony, Nov 10 2026). scorecard.py skips NYSE holidays.
+    ("score_pre",   "scorecard.yml",   {"label": "Pre-market"},   "07:27", WEEKDAYS, 60),
+    ("score_mid",   "scorecard.yml",   {"label": "Midday"},       "11:45", WEEKDAYS, 90),
+    ("score_close", "scorecard.yml",   {"label": "Market close"}, "15:05", WEEKDAYS, 90),
 ]
 EVERY_TICK = [("welcome.yml", {"mode": "new"})]
 BOARD = ("pulse.yml", {"mode": "board"})          # live board refresh, Sun-Fri

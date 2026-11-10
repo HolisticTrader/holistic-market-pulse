@@ -72,3 +72,9 @@ Weekdays: 6:48 AM brief · 7:33 AM Morning Spark · 12 PM trivia · 3:15 PM mark
 
 ## Dojo chat points
 Reply to Tony or a #trade-alert setup = 3 · reply to another trader = 2 · any other message = 1 · max 10 a day.
+
+## Trade Alert Scorecard posts
+`scorecard.py` posts an @everyone scorecard update to #general (through the same webhook) three times every market day: Pre-market 7:27 AM CT, Midday 11:45 AM CT, Market close 3:05 PM CT. The Post Clock (`tick.py`) fires `scorecard.yml`; NYSE holidays are skipped.
+- Data: `scorecard/trade_alerts.csv` (the table behind the scorecard dashboard on claude.ai). Each run refreshes prices from Yahoo, applies the touch rules (T1 = close half, runner stop to entry), and commits the CSV back.
+- To add a new call, add a row to the CSV (or ask Claude: "add my new call to the scorecard").
+- Test without posting: `python scorecard.py Midday --dry-run`. Post one now: Actions → "Trade Alert Scorecard" → Run workflow.

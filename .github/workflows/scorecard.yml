@@ -1,0 +1,30 @@
+name: Trade Alert Scorecard
+# Refreshes scorecard/trade_alerts.csv and posts an @everyone update to #general.
+# Timed runs (pre-market, midday, market close) are fired by the Post Clock (tick.py).
+on:
+  workflow_dispatch:
+    inputs:
+      label:
+        description: "Pre-market, Midday or Market close"
+        default: "Update"
+permissions:
+  contents: write
+concurrency:
+  group: scorecard
+  cancel-in-progress: false
+jobs:
+  run:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Refresh and post
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: python scorecard.py "${{ inputs.label }}"
+      - name: Save scorecard
+        if: always()
+        run: bash .github/scripts/save_state.sh "holistic-scorecard-bot" "scorecard state [skip ci]" scorecard/trade_alerts.csv state/scorecard.json
