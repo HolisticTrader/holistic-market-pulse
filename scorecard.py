@@ -165,6 +165,32 @@ def build(rows, label, now, extra):
     return "\n".join(lines)[:1990]
 
 
+PUBLIC_COLS = ["alert_date", "pair", "direction", "status", "r_now", "banked_r", "open_r", "risk_on", "card", "note"]
+PUBLIC_PATH = os.path.join(HERE, "scorecard", "public.csv")
+
+
+def public_note(r):
+    """A note with no price levels (entry, stop and targets stay behind the Substack paywall)."""
+    closed = "Trade closed" in (r.get("note") or "")
+    if r["status"] == "T1 hit":
+        head = f"Half closed at T1 ({num(r['banked_r']):+.2f}R banked); "
+        return head + ("runner stopped out at entry. Trade closed." if closed else "runner still open with its stop at entry.")
+    if r["status"] == "Stopped out":
+        return "Stopped out. Trade closed."
+    if (r.get("stop_basis") or "").lower().startswith("assumed"):
+        return "No stop was published; the scorecard uses the prior weekly candle."
+    return ""
+
+
+def write_public(rows):
+    """The dashboard's public copy: results only, no levels."""
+    with open(PUBLIC_PATH, "w", newline="", encoding="utf-8") as f:
+        w = csv.DictWriter(f, fieldnames=PUBLIC_COLS)
+        w.writeheader()
+        for r in rows:
+            w.writerow({**{k: r.get(k, "") for k in PUBLIC_COLS}, "note": public_note(r)})
+
+
 def main():
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
     dry = "--dry-run" in sys.argv
@@ -197,6 +223,7 @@ def main():
         w = csv.DictWriter(f, fieldnames=cols)
         w.writeheader()
         w.writerows(rows)
+    write_public(rows)
 
     if dry:
         return

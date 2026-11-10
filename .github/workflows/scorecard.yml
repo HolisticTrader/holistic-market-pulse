@@ -27,4 +27,4 @@ jobs:
         run: python scorecard.py "${{ inputs.label }}"
       - name: Save scorecard
         if: always()
-        run: bash .github/scripts/save_state.sh "holistic-scorecard-bot" "scorecard state [skip ci]" scorecard/trade_alerts.csv state/scorecard.json
+        run: bash .github/scripts/save_state.sh "holistic-scorecard-bot" "scorecard state [skip ci]" scorecard/trade_alerts.csv scorecard/public.csv state/scorecard.json
