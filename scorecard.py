@@ -111,7 +111,7 @@ def refresh(rows, today, since):
                 r["risk_on"] = "0"
                 r["r_now"] = f"{num(r['banked_r']):.2f}"
                 r["note"] = (r["note"] + f" Runner stop at entry hit {today}. Trade closed.").strip()
-                changes.append(f"🔒 RUNNER CLOSED AT ENTRY: {r['pair']} {side}, {r['entry']}")
+                changes.append(f"🔒 RUNNER CLOSED AT ENTRY: {r['pair']} {side}")
             else:
                 o = 0.5 * sg * (last - e) / risk
                 r["open_r"] = f"{o:.2f}"
@@ -122,14 +122,14 @@ def refresh(rows, today, since):
             if stop_hit and not t1_hit:
                 r.update(status="Stopped out", banked_r="-1", open_r="0", r_now="-1.00", risk_on="0",
                          note=(r["note"] + f" Stopped {today}. Trade closed.").strip())
-                changes.append(f"❌ STOP HIT: {r['pair']} {side}, {r['stop']}")
+                changes.append(f"❌ STOP HIT: {r['pair']} {side}")
             elif t1_hit:
                 banked = 0.5 * abs(t1 - e) / risk
                 o = 0.5 * sg * (last - e) / risk
                 r.update(status="T1 hit", banked_r=f"{banked:.2f}", open_r=f"{o:.2f}",
                          r_now=f"{banked + o:.2f}", risk_on="0",
                          note=(r["note"] + f" Half closed at T1 {r['t1']} on {today}; runner stop moved to entry.").strip())
-                changes.append(f"🎯 T1 HIT: {r['pair']} {side}, {r['t1']}")
+                changes.append(f"🎯 T1 HIT: {r['pair']} {side} ({banked:+.2f}R banked)")
             else:
                 R = sg * (last - e) / risk
                 r["r_now"] = r["open_r"] = f"{R:.2f}"
@@ -159,6 +159,7 @@ def build(rows, label, now, extra):
         f"🔥 Best: {best['pair']} {fr(best['r_now'])} | 🧊 Worst: {worst['pair']} {fr(worst['r_now'])}",
         *extra,
         f"Live scorecard 👉 {DASH}",
+        "🔒 Entry, stop and targets for every call go to paid subscribers: https://immaculatetonyeth.substack.com",
         "Education only. Not financial advice.",
     ]
     return "\n".join(lines)[:1990]
