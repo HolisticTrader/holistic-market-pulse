@@ -10,7 +10,9 @@ Usage: python scorecard.py "Pre-market" | "Midday" | "Market close"   (any label
 Tony's rules (Nov 10, 2026):
 - 1% ($1,000) risk per call on a $100K account.
 - Stops and targets count on a TOUCH of the daily high/low since the post.
-- T1 must be at least 1R from entry; a closer target is not a take-profit.
+- Take-profit (fib drawn 0 = wholesale low, 1 = retail high): long T1 = 0.618 (start of retail),
+  full TP = 1; short T1 = 0.382 (start of wholesale), full TP = 0. Runner may run to the 1.618.
+  The t1 column holds that published 0.618 / 0.382 level.
 - At T1: close half, move the runner's stop to entry. Runner touching entry closes the trade.
 - Status: T1 hit / In profit / Flat (|R| < 0.15) / Under water / Stopped out.
 - Closed trades ("Trade closed" in the note) stay frozen. Never move a published stop.
@@ -102,8 +104,6 @@ def refresh(rows, today, since):
         lo = min([num(r["low_since"], 1e18)] + [l for d, h, l in days if d >= r["alert_date"]])
         side = r["direction"].lower()
         t1 = num(r["t1"], None) if r.get("t1") else None
-        if t1 is not None and abs(t1 - e) < risk:
-            t1 = None  # Tony's rule: T1 must be at least 1R from entry, or it is not a take-profit
 
         if r["status"] == "T1 hit":
             # runner: stop sits at entry

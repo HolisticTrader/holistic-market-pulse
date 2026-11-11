@@ -1,6 +1,6 @@
 alert_date,pair,direction,status,r_now,banked_r,open_r,risk_on,card,note
 2026-09-06,GBP/JPY,Short,Under water,-0.17,0,-0.17,1,https://immaculatetonyeth.substack.com/p/gbpjpy-late-bulls-are-the-exit-liquidity,
-2026-09-12,AUD/JPY,Short,In profit,0.55,0,0.55,1,https://immaculatetonyeth.substack.com/p/audjpy-is-rejecting-the-top-of-a,
+2026-09-12,AUD/JPY,Short,T1 hit,0.11,0.11,0,0,https://immaculatetonyeth.substack.com/p/audjpy-is-rejecting-the-top-of-a,Half closed at T1 (+0.11R banked); runner stopped out at entry. Trade closed.
 2026-09-12,ZAR/JPY,Short,Under water,-0.32,0,-0.32,1,https://immaculatetonyeth.substack.com/p/zarjpy-a-stage-3-to-4-transition,No stop was published; the scorecard uses the prior weekly candle.
 2026-09-19,CHF/JPY,Long,In profit,0.53,0,0.53,1,https://immaculatetonyeth.substack.com/p/chfjpy-a-382-pullback-in-a-strong,
 2026-09-20,NZD/CHF,Long,Under water,-0.36,0,-0.36,1,,
@@ -10,7 +10,7 @@ alert_date,pair,direction,status,r_now,banked_r,open_r,risk_on,card,note
 2026-10-03,GBP/AUD,Long,In profit,0.64,0,0.64,1,https://immaculatetonyeth.substack.com/p/gbpaud-the-selling-is-tired-heres,
 2026-10-05,EUR/CHF,Short,In profit,0.96,0,0.96,1,https://immaculatetonyeth.substack.com/p/eurchf-the-bounce-just-failed-at,
 2026-10-11,NZD/JPY,Long,In profit,0.18,0,0.18,1,https://immaculatetonyeth.substack.com/p/buy-wholesale-sell-retail-nzdjpy,
-2026-10-18,NZD/USD,Long,Flat,-0.13,0,-0.13,1,https://immaculatetonyeth.substack.com/p/nzdusd-the-kiwi-is-heading-into-wholesale,
+2026-10-18,NZD/USD,Long,T1 hit,0.075,0.075,0,0,https://immaculatetonyeth.substack.com/p/nzdusd-the-kiwi-is-heading-into-wholesale,Half closed at T1 (+0.07R banked); runner stopped out at entry. Trade closed.
 2026-10-18,AUD/CAD,Short,In profit,0.25,0,0.25,1,https://immaculatetonyeth.substack.com/p/audcad-five-months-at-retail-and,
 2026-10-25,USD/CAD,Short,Under water,-0.82,0,-0.82,1,https://immaculatetonyeth.substack.com/p/usdcad-rejected-at-retail-the-road,
 2026-11-09,EUR/AUD,Long,Flat,-0.05,0,-0.05,1,https://immaculatetonyeth.substack.com/p/euraud-the-aussie-got-its-hike-now,
