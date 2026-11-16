@@ -24,7 +24,7 @@ jobs:
       - name: Refresh and post
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-        run: python scorecard.py "${{ inputs.label }}"
+        run: python scorecard.py "${{ inputs.label }}" --dry-run
       - name: Save scorecard
         if: always()
         run: bash .github/scripts/save_state.sh "holistic-scorecard-bot" "scorecard state [skip ci]" scorecard/trade_alerts.csv scorecard/public.csv state/scorecard.json
