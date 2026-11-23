@@ -1,5 +1,5 @@
 {
- "run_utc": "2026-11-23T14:49:09+00:00",
+ "run_utc": "2026-11-23T18:17:06+00:00",
  "rows": [
   {
    "label": "SPY",
@@ -7,13 +7,13 @@
    "week_of": "2026-11-23",
    "days_in_week": 1,
    "open": 724.33002,
-   "high": 724.81,
+   "high": 727.96997,
    "low": 713.53998,
-   "close": 717.14001,
+   "close": 724.16998,
    "prev_close": 689.81,
-   "pct_vs_prev_close": 3.96,
-   "pct_open_to_close": -0.99,
-   "last_price": 717.14
+   "pct_vs_prev_close": 4.98,
+   "pct_open_to_close": -0.02,
+   "last_price": 724.17
   },
   {
    "label": "QQQ",
@@ -21,13 +21,13 @@
    "week_of": "2026-11-23",
    "days_in_week": 1,
    "open": 655.97998,
-   "high": 656.25,
+   "high": 657.5025,
    "low": 641.95007,
-   "close": 643.82001,
+   "close": 652.29999,
    "prev_close": 608.45001,
-   "pct_vs_prev_close": 5.81,
-   "pct_open_to_close": -1.85,
-   "last_price": 643.82
+   "pct_vs_prev_close": 7.21,
+   "pct_open_to_close": -0.56,
+   "last_price": 652.3
   },
   {
    "label": "DXY",
@@ -35,13 +35,13 @@
    "week_of": "2026-11-23",
    "days_in_week": 1,
    "open": 103.84,
-   "high": 104.283,
+   "high": 104.53,
    "low": 103.475,
-   "close": 104.128,
+   "close": 104.476,
    "prev_close": 103.81,
-   "pct_vs_prev_close": 0.31,
-   "pct_open_to_close": 0.28,
-   "last_price": 104.128
+   "pct_vs_prev_close": 0.64,
+   "pct_open_to_close": 0.61,
+   "last_price": 104.476
   },
   {
    "label": "GOLD",
@@ -51,11 +51,11 @@
    "open": 3570.5,
    "high": 3691.0,
    "low": 3552.30005,
-   "close": 3666.80005,
+   "close": 3657.0,
    "prev_close": 3515.3999,
-   "pct_vs_prev_close": 4.31,
-   "pct_open_to_close": 2.7,
-   "last_price": 3666.8
+   "pct_vs_prev_close": 4.03,
+   "pct_open_to_close": 2.42,
+   "last_price": 3657.0
   },
   {
    "label": "GBPJPY",
@@ -65,11 +65,11 @@
    "open": 207.11,
    "high": 209.17599,
    "low": 207.0,
-   "close": 207.847,
+   "close": 207.28799,
    "prev_close": 208.993,
-   "pct_vs_prev_close": -0.55,
-   "pct_open_to_close": 0.36,
-   "last_price": 207.847
+   "pct_vs_prev_close": -0.82,
+   "pct_open_to_close": 0.09,
+   "last_price": 207.288
   },
   {
    "label": "AUDJPY",
@@ -79,11 +79,11 @@
    "open": 104.476,
    "high": 106.128,
    "low": 104.476,
-   "close": 105.675,
+   "close": 105.482,
    "prev_close": 106.295,
-   "pct_vs_prev_close": -0.58,
-   "pct_open_to_close": 1.15,
-   "last_price": 105.675
+   "pct_vs_prev_close": -0.76,
+   "pct_open_to_close": 0.96,
+   "last_price": 105.482
   },
   {
    "label": "USDMXN",
@@ -93,11 +93,11 @@
    "open": 19.143,
    "high": 19.264,
    "low": 19.061,
-   "close": 19.13873,
+   "close": 19.14519,
    "prev_close": 19.0901,
-   "pct_vs_prev_close": 0.25,
-   "pct_open_to_close": -0.02,
-   "last_price": 19.1387
+   "pct_vs_prev_close": 0.29,
+   "pct_open_to_close": 0.01,
+   "last_price": 19.1452
   },
   {
    "label": "GBPAUD",
@@ -106,12 +106,12 @@
    "days_in_week": 1,
    "open": 1.97705,
    "high": 1.9787,
-   "low": 1.96388,
-   "close": 1.96667,
+   "low": 1.96359,
+   "close": 1.96499,
    "prev_close": 1.96591,
-   "pct_vs_prev_close": 0.04,
-   "pct_open_to_close": -0.53,
-   "last_price": 1.9667
+   "pct_vs_prev_close": -0.05,
+   "pct_open_to_close": -0.61,
+   "last_price": 1.965
   },
   {
    "label": "USDZAR",
@@ -121,11 +121,11 @@
    "open": 17.5858,
    "high": 17.5858,
    "low": 17.313,
-   "close": 17.3619,
+   "close": 17.41804,
    "prev_close": 17.49462,
-   "pct_vs_prev_close": -0.76,
-   "pct_open_to_close": -1.27,
-   "last_price": 17.3619
+   "pct_vs_prev_close": -0.44,
+   "pct_open_to_close": -0.95,
+   "last_price": 17.418
   },
   {
    "label": "NZDJPY",
@@ -135,11 +135,11 @@
    "open": 86.521,
    "high": 87.227,
    "low": 86.315,
-   "close": 86.844,
+   "close": 86.613,
    "prev_close": 87.531,
-   "pct_vs_prev_close": -0.78,
-   "pct_open_to_close": 0.37,
-   "last_price": 86.844
+   "pct_vs_prev_close": -1.05,
+   "pct_open_to_close": 0.11,
+   "last_price": 86.613
   },
   {
    "label": "USDNOK",
@@ -147,13 +147,13 @@
    "week_of": "2026-11-23",
    "days_in_week": 1,
    "open": 9.7494,
-   "high": 9.8572,
+   "high": 9.87367,
    "low": 9.71125,
-   "close": 9.8162,
+   "close": 9.84872,
    "prev_close": 9.77018,
-   "pct_vs_prev_close": 0.47,
-   "pct_open_to_close": 0.69,
-   "last_price": 9.8162
+   "pct_vs_prev_close": 0.8,
+   "pct_open_to_close": 1.02,
+   "last_price": 9.8487
   },
   {
    "label": "AUDUSD",
@@ -163,11 +163,11 @@
    "open": 0.6619,
    "high": 0.66587,
    "low": 0.66011,
-   "close": 0.66379,
+   "close": 0.66287,
    "prev_close": 0.66562,
-   "pct_vs_prev_close": -0.27,
-   "pct_open_to_close": 0.29,
-   "last_price": 0.6638
+   "pct_vs_prev_close": -0.41,
+   "pct_open_to_close": 0.15,
+   "last_price": 0.6629
   },
   {
    "label": "EURCHF",
@@ -177,11 +177,11 @@
    "open": 0.9206,
    "high": 0.92322,
    "low": 0.91694,
-   "close": 0.91959,
+   "close": 0.91789,
    "prev_close": 0.92592,
-   "pct_vs_prev_close": -0.68,
-   "pct_open_to_close": -0.11,
-   "last_price": 0.9196
+   "pct_vs_prev_close": -0.87,
+   "pct_open_to_close": -0.29,
+   "last_price": 0.9179
   },
   {
    "label": "CHFJPY",
@@ -191,11 +191,11 @@
    "open": 188.37801,
    "high": 190.09599,
    "low": 188.089,
-   "close": 189.298,
+   "close": 188.808,
    "prev_close": 189.16499,
-   "pct_vs_prev_close": 0.07,
-   "pct_open_to_close": 0.49,
-   "last_price": 189.298
+   "pct_vs_prev_close": -0.19,
+   "pct_open_to_close": 0.23,
+   "last_price": 188.808
   },
   {
    "label": "AUDCAD",
@@ -205,11 +205,11 @@
    "open": 0.94804,
    "high": 0.95527,
    "low": 0.94729,
-   "close": 0.95263,
+   "close": 0.95275,
    "prev_close": 0.95464,
-   "pct_vs_prev_close": -0.21,
-   "pct_open_to_close": 0.48,
-   "last_price": 0.9526
+   "pct_vs_prev_close": -0.2,
+   "pct_open_to_close": 0.5,
+   "last_price": 0.9528
   },
   {
    "label": "NZDUSD",
@@ -218,12 +218,12 @@
    "days_in_week": 1,
    "open": 0.54705,
    "high": 0.54837,
-   "low": 0.54407,
-   "close": 0.54549,
+   "low": 0.5436,
+   "close": 0.54431,
    "prev_close": 0.54814,
-   "pct_vs_prev_close": -0.48,
-   "pct_open_to_close": -0.28,
-   "last_price": 0.5455
+   "pct_vs_prev_close": -0.7,
+   "pct_open_to_close": -0.5,
+   "last_price": 0.5443
   },
   {
    "label": "ZARJPY",
@@ -233,11 +233,11 @@
    "open": 9.032,
    "high": 9.192,
    "low": 8.95,
-   "close": 9.154,
+   "close": 9.12,
    "prev_close": 9.1178,
-   "pct_vs_prev_close": 0.4,
-   "pct_open_to_close": 1.35,
-   "last_price": 9.154
+   "pct_vs_prev_close": 0.02,
+   "pct_open_to_close": 0.97,
+   "last_price": 9.12
   },
   {
    "label": "PEP",
@@ -245,13 +245,13 @@
    "week_of": "2026-11-23",
    "days_in_week": 1,
    "open": 138.89999,
-   "high": 139.75,
+   "high": 140.57001,
    "low": 138.14999,
-   "close": 139.70061,
+   "close": 140.535,
    "prev_close": 140.53999,
-   "pct_vs_prev_close": -0.6,
-   "pct_open_to_close": 0.58,
-   "last_price": 139.701
+   "pct_vs_prev_close": -0.0,
+   "pct_open_to_close": 1.18,
+   "last_price": 140.535
   },
   {
    "label": "RKT",
@@ -259,13 +259,13 @@
    "week_of": "2026-11-23",
    "days_in_week": 1,
    "open": 13.91,
-   "high": 13.968,
+   "high": 14.155,
    "low": 13.5,
-   "close": 13.735,
+   "close": 14.07,
    "prev_close": 13.75,
-   "pct_vs_prev_close": -0.11,
-   "pct_open_to_close": -1.26,
-   "last_price": 13.735
+   "pct_vs_prev_close": 2.33,
+   "pct_open_to_close": 1.15,
+   "last_price": 14.07
   },
   {
    "label": "INTU",
@@ -273,13 +273,13 @@
    "week_of": "2026-11-23",
    "days_in_week": 1,
    "open": 274.5,
-   "high": 280.04501,
+   "high": 282.17999,
    "low": 272.26001,
-   "close": 276.20001,
+   "close": 279.85001,
    "prev_close": 270.44,
-   "pct_vs_prev_close": 2.13,
-   "pct_open_to_close": 0.62,
-   "last_price": 276.2
+   "pct_vs_prev_close": 3.48,
+   "pct_open_to_close": 1.95,
+   "last_price": 279.85
   },
   {
    "label": "RIVN",
@@ -287,13 +287,13 @@
    "week_of": "2026-11-23",
    "days_in_week": 1,
    "open": 10.98,
-   "high": 11.33,
+   "high": 11.36,
    "low": 10.9,
-   "close": 11.0706,
+   "close": 11.1926,
    "prev_close": 10.33,
-   "pct_vs_prev_close": 7.17,
-   "pct_open_to_close": 0.83,
-   "last_price": 11.071
+   "pct_vs_prev_close": 8.35,
+   "pct_open_to_close": 1.94,
+   "last_price": 11.193
   },
   {
    "label": "U",
@@ -302,12 +302,12 @@
    "days_in_week": 1,
    "open": 48.1625,
    "high": 48.0,
-   "low": 45.87,
-   "close": 45.87,
+   "low": 45.78,
+   "close": 47.51,
    "prev_close": 44.75,
-   "pct_vs_prev_close": 2.5,
-   "pct_open_to_close": -4.76,
-   "last_price": 45.87
+   "pct_vs_prev_close": 6.17,
+   "pct_open_to_close": -1.35,
+   "last_price": 47.51
   },
   {
    "label": "NOW",
@@ -315,13 +315,13 @@
    "week_of": "2026-11-23",
    "days_in_week": 1,
    "open": 91.1,
-   "high": 92.12,
+   "high": 93.41,
    "low": 90.42,
-   "close": 90.5141,
+   "close": 92.29,
    "prev_close": 87.61,
-   "pct_vs_prev_close": 3.31,
-   "pct_open_to_close": -0.64,
-   "last_price": 90.514
+   "pct_vs_prev_close": 5.34,
+   "pct_open_to_close": 1.31,
+   "last_price": 92.29
   },
   {
    "label": "MRVL",
@@ -329,13 +329,13 @@
    "week_of": "2026-11-23",
    "days_in_week": 1,
    "open": 146.19501,
-   "high": 146.42999,
+   "high": 149.98,
    "low": 139.25999,
-   "close": 139.6235,
+   "close": 144.42999,
    "prev_close": 122.28,
-   "pct_vs_prev_close": 14.18,
-   "pct_open_to_close": -4.5,
-   "last_price": 139.624
+   "pct_vs_prev_close": 18.11,
+   "pct_open_to_close": -1.21,
+   "last_price": 144.43
   },
   {
    "label": "MCD",
@@ -343,13 +343,13 @@
    "week_of": "2026-11-23",
    "days_in_week": 1,
    "open": 271.78,
-   "high": 273.51001,
+   "high": 275.85999,
    "low": 271.0,
-   "close": 273.26501,
+   "close": 275.565,
    "prev_close": 273.23999,
-   "pct_vs_prev_close": 0.01,
-   "pct_open_to_close": 0.55,
-   "last_price": 273.265
+   "pct_vs_prev_close": 0.85,
+   "pct_open_to_close": 1.39,
+   "last_price": 275.565
   },
   {
    "label": "SNOW",
@@ -357,13 +357,13 @@
    "week_of": "2026-11-23",
    "days_in_week": 1,
    "open": 278.0,
-   "high": 277.54001,
+   "high": 278.28,
    "low": 268.5,
-   "close": 269.61499,
+   "close": 273.09,
    "prev_close": 254.82001,
-   "pct_vs_prev_close": 5.81,
-   "pct_open_to_close": -3.02,
-   "last_price": 269.615
+   "pct_vs_prev_close": 7.17,
+   "pct_open_to_close": -1.77,
+   "last_price": 273.09
   },
   {
    "label": "DELL",
@@ -373,11 +373,11 @@
    "open": 377.14999,
    "high": 379.03,
    "low": 322.31,
-   "close": 330.0,
+   "close": 337.80499,
    "prev_close": 278.01999,
-   "pct_vs_prev_close": 18.7,
-   "pct_open_to_close": -12.5,
-   "last_price": 330.0
+   "pct_vs_prev_close": 21.5,
+   "pct_open_to_close": -10.43,
+   "last_price": 337.805
   },
   {
    "label": "UPS",
@@ -385,13 +385,13 @@
    "week_of": "2026-11-23",
    "days_in_week": 1,
    "open": 108.05,
-   "high": 108.6,
+   "high": 108.71,
    "low": 106.3101,
-   "close": 106.4248,
+   "close": 108.565,
    "prev_close": 106.22,
-   "pct_vs_prev_close": 0.19,
-   "pct_open_to_close": -1.5,
-   "last_price": 106.425
+   "pct_vs_prev_close": 2.21,
+   "pct_open_to_close": 0.48,
+   "last_price": 108.565
   },
   {
    "label": "OKLO",
@@ -400,7 +400,7 @@
    "days_in_week": 1,
    "open": 22.02,
    "high": 22.595,
-   "low": 21.08,
+   "low": 20.86,
    "close": 21.095,
    "prev_close": 19.85,
    "pct_vs_prev_close": 6.27,
@@ -414,12 +414,12 @@
    "days_in_week": 1,
    "open": 1.6569,
    "high": 1.65929,
-   "low": 1.64299,
-   "close": 1.64718,
+   "low": 1.64228,
+   "close": 1.64304,
    "prev_close": 1.64769,
-   "pct_vs_prev_close": -0.03,
-   "pct_open_to_close": -0.59,
-   "last_price": 1.6472
+   "pct_vs_prev_close": -0.28,
+   "pct_open_to_close": -0.84,
+   "last_price": 1.643
   }
  ]
 }
