@@ -1,0 +1,80 @@
+<!doctype html><html><head><meta charset="utf-8">
+<style>html,body{margin:0;background:#1a040a}canvas{display:block}</style></head><body>
+<canvas id="c" width="1320" height="2868"></canvas>
+<script>
+const W=1320,H=2868,cx=document.getElementById('c').getContext('2d');
+const q=new URLSearchParams(location.search);
+const MODE=q.get('mode')||'lock';
+// seeded rng
+let s=7;function r(){s=(s*16807)%2147483647;return (s-1)/2147483646}
+// price path: dip into wholesale, bounce, trend to retail
+const N=46,C=[];let p=62;
+for(let i=0;i<N;i++){
+  let tgt=i<14?62-i*2.6:i<18?26+(i-14)*1.5:32+(i-18)*2.1;
+  const o=p,c=o+(tgt-o)*0.55+(r()-0.5)*7;
+  const h=Math.max(o,c)+r()*4,l=Math.min(o,c)-r()*4;
+  C.push({o,c,h,l});p=c;
+}
+function draw(t){
+  // background
+  const g=cx.createLinearGradient(0,0,W*0.4,H);
+  g.addColorStop(0,'#3d0a17');g.addColorStop(0.45,'#5a0f22');g.addColorStop(1,'#1c040b');
+  cx.fillStyle=g;cx.fillRect(0,0,W,H);
+  const rg=cx.createRadialGradient(W*0.75,H*0.7,50,W*0.75,H*0.7,1400);
+  rg.addColorStop(0,'rgba(170,40,70,0.35)');rg.addColorStop(1,'rgba(0,0,0,0)');
+  cx.fillStyle=rg;cx.fillRect(0,0,W,H);
+  const vg=cx.createRadialGradient(W/2,H/2,H*0.3,W/2,H/2,H*0.75);
+  vg.addColorStop(0,'rgba(0,0,0,0)');vg.addColorStop(1,'rgba(8,0,3,0.6)');
+  cx.fillStyle=vg;cx.fillRect(0,0,W,H);
+  // grid
+  cx.strokeStyle='rgba(255,190,200,0.045)';cx.lineWidth=2;
+  for(let x=0;x<=W;x+=110){cx.beginPath();cx.moveTo(x,0);cx.lineTo(x,H);cx.stroke()}
+  for(let y=0;y<=H;y+=110){cx.beginPath();cx.moveTo(0,y);cx.lineTo(W,y);cx.stroke()}
+  // chart area
+  const top=1520,bot=2440,lo=10,hi=110;
+  const Y=v=>bot-(v-lo)/(hi-lo)*(bot-top);
+  // zones
+  const zone=(a,b,col,lab,ly)=>{cx.fillStyle=col;cx.fillRect(0,Y(b),W,Y(a)-Y(b));
+    cx.font='600 30px Helvetica, Arial';cx.fillStyle='rgba(245,179,1,0.75)';cx.letterSpacing='8px';
+    cx.fillText(lab,60,ly)};
+  zone(18,30,'rgba(245,179,1,0.07)','WHOLESALE',Y(18)+48);
+  zone(92,104,'rgba(245,179,1,0.05)','RETAIL',Y(104)-22);
+  cx.setLineDash([10,14]);cx.strokeStyle='rgba(245,179,1,0.35)';cx.lineWidth=2;
+  [30,92].forEach(v=>{cx.beginPath();cx.moveTo(0,Y(v));cx.lineTo(W,Y(v));cx.stroke()});
+  cx.setLineDash([]);
+  // candles
+  const step=(W-120)/N,bw=step*0.56;
+  const shown=t*N;
+  let last=null;
+  for(let i=0;i<N;i++){
+    if(i>=Math.ceil(shown))break;
+    const k=Math.min(1,shown-i);const d=C[i];
+    const c=d.o+(d.c-d.o)*k,h=Math.max(d.o,c)+(d.h-Math.max(d.o,d.c))*k,l=Math.min(d.o,c)-(Math.max(d.o,d.c)-d.l)*0+(-(Math.min(d.o,d.c)-d.l))*k;
+    const x=40+i*step+step/2,up=c>=d.o;
+    cx.strokeStyle=up?'#e0607a':'#8a2a3e';cx.lineWidth=4;
+    cx.beginPath();cx.moveTo(x,Y(h));cx.lineTo(x,Y(l));cx.stroke();
+    const y1=Y(Math.max(d.o,c)),y2=Y(Math.min(d.o,c));
+    if(up){cx.fillStyle='#d24a66';cx.shadowColor='rgba(255,90,120,0.45)';cx.shadowBlur=18}
+    else{cx.fillStyle='#3a0812';cx.shadowBlur=0}
+    cx.fillRect(x-bw/2,y1,bw,Math.max(4,y2-y1));cx.shadowBlur=0;
+    if(!up){cx.strokeStyle='#8a2a3e';cx.lineWidth=3;cx.strokeRect(x-bw/2,y1,bw,Math.max(4,y2-y1))}
+    last={x,c};
+  }
+  // price line + tag
+  if(last){
+    cx.setLineDash([4,10]);cx.strokeStyle='rgba(245,179,1,0.8)';cx.lineWidth=3;
+    cx.beginPath();cx.moveTo(last.x+bw,Y(last.c));cx.lineTo(W,Y(last.c));cx.stroke();cx.setLineDash([]);
+    cx.fillStyle='#f5b301';cx.shadowColor='rgba(245,179,1,0.8)';cx.shadowBlur=30;
+    cx.beginPath();cx.arc(last.x,Y(last.c),11,0,7);cx.fill();cx.shadowBlur=0;
+  }
+  // footer motto
+  cx.textAlign='center';cx.letterSpacing='14px';
+  cx.font='700 34px Helvetica, Arial';cx.fillStyle='rgba(245,179,1,0.85)';
+  cx.fillText('THE EDGE IS AT THE EDGES',W/2+7,2560);
+  cx.letterSpacing='10px';cx.font='500 24px Helvetica, Arial';cx.fillStyle='rgba(255,200,210,0.45)';
+  cx.fillText('BUY WHOLESALE  ·  SELL RETAIL',W/2+5,2612);
+  cx.textAlign='left';cx.letterSpacing='0px';
+  if(MODE==='home'){cx.fillStyle='rgba(20,2,8,0.35)';cx.fillRect(0,0,W,H)}
+}
+window.draw=draw;draw(+(q.get('t')||1));
+</script></body></html>
