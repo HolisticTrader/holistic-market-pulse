@@ -15,8 +15,9 @@
   "2026-10-18|AUD/CAD",
   "2026-10-25|USD/CAD",
   "2026-11-09|EUR/AUD",
-  "2026-11-10|SPX"
+  "2026-11-10|SPX",
+  "2026-11-22|AUD/NZD"
  ],
- "last_post": "2026-11-25T16:51-05:00",
- "last_label": "Market close"
+ "last_post": "2026-11-27T08:51-05:00",
+ "last_label": "Pre-market"
 }
